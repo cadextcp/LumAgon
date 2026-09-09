@@ -30,12 +30,28 @@ von dort mit `/bin/bbcbasic24` wieder in BASIC.
 | `run-cli.bat` | Emulator headless im Terminal — schnelle Texttests, **kein** `MODE`/Grafik |
 | `sdcard/` | Die emulierte SD-Karte. Alles hier ist im Emulator sichtbar. |
 | `sdcard/progs/` | **Hier kommen eigene Programme hin.** Direkt mit jedem Editor bearbeitbar. |
+| `docs/PLAN.md` | Projektplan LED-Wand: Stand, Architektur, Messwerte, offene Punkte |
 | `sdcard/bin/` | BBC BASIC + Utilities (Assembler, vi, unzip …) |
 | `sdcard/demos/` | Beispielprogramme in BASIC (Cube, Mandelbrot, Sprites, Sound …) |
 | `sdcard/games/` | Fertige Spiele zum Ausprobieren |
 | `sdcard/docs/` | Komplette Agon-Dokumentation (siehe unten) |
 | `sdcard/autoexec.txt` | Wird beim Boot ausgeführt: wechselt nach `/progs` und startet BBC BASIC |
 | `tools/` | Fab Agon Emulator v1.2.4 (Windows x64) + heruntergeladenes ZIP |
+
+## Projekt: LED-Wand
+
+Aktuelles Vorhaben ist eine 12×12-Matrix aus SK6812-RGBNW, angesteuert über GPIO.
+Die Programme liegen in `sdcard/progs/`:
+
+| Datei | Zweck |
+|---|---|
+| `ledmatrix.bas` | Hauptprogramm mit Vorschau, Demos und LED-Ausgabe |
+| `calib.bas` | ermittelt die Verdrahtung der Matrix |
+| `ledtest.bas` | Minimalprogramm für die erste Inbetriebnahme |
+| `ws2812.asm` | zeitkritische Bitausgabe (mit `ez80asm` übersetzen) |
+
+Stand, Architektur und offene Punkte stehen in [docs/PLAN.md](docs/PLAN.md) — Abschnitt 0
+gibt die Kurzfassung.
 
 ## Workflow
 

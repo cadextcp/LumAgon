@@ -3,6 +3,35 @@
 12×12-Matrix aus SK6812 RGBNW (12 V), angesteuert per GPIO vom Agon Light 2,
 programmiert in BBC BASIC.
 
+## 0. Stand
+
+Alles liegt in `sdcard/progs/`:
+
+| Datei | Zweck | Stand |
+|---|---|---|
+| `ledmatrix.bas` | Hauptprogramm: Framebuffer, Mapping, Vorschau, Demos, GPIO-Ausgabe | läuft, Grafik ungeprüft |
+| `calib.bas` | Kalibrierung der Verdrahtung, schreibt `matrix.map` | Logik verifiziert |
+| `ledtest.bas` | Minimalprogramm für die erste Inbetriebnahme, ohne Grafik | läuft |
+| `ws2812.asm` | zeitkritische Bitausgabe auf PC4, mit `ez80asm` zu übersetzen | Timing ungeprüft |
+| `cyctest.asm` | Messhilfe für Instruktionszyklen | zeigte: Emulator taugt dafür nicht |
+
+**Fertig und verifiziert:** Framebuffer und Mapping (M0), Kalibrierverfahren mit allen
+16 Verdrahtungen (M1), Übersetzung und Ablauf der Assemblerroutine (M2). Beide MOS-
+Versionen geprüft (Abschnitt 13).
+
+**Offen — braucht Hardware:**
+
+1. **Das SK6812-Timing.** Rechnerisch geht es auf, gemessen ist es nicht. Der Emulator
+   zählt keine echten Zyklen, kann es also nicht beantworten (Abschnitt 11).
+2. **Die Bildschirmvorschau** wurde nie angesehen — nur geprüft, dass sie fehlerfrei
+   durchläuft und die Farbwerte stimmen.
+3. **M3 und M4** (Integration an der Wand, Effektbibliothek).
+
+**Nächster Schritt:** Mit `ledtest.bas` den ersten Kontakt herstellen, sobald der
+Pegelwandler da ist. Zeigt dessen Test 3 statt schwachem Weiß bunte Farben, stimmt das
+Timing nicht — dann sind die NOPs in `ws2812.asm` anzupassen oder Plan B (SPI, Abschnitt 4)
+zu ziehen.
+
 ## 1. Ausgangslage
 
 | | |
