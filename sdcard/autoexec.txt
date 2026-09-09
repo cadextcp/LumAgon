@@ -1,1 +1,2 @@
 cd /progs
+/bin/bbcbasic24

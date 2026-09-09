@@ -4,16 +4,17 @@ Arbeitsumgebung für BBC BASIC auf dem Agon Light, komplett lokal und offline la
 
 ## Schnellstart
 
-1. `run.bat` starten (Doppelklick) → Emulator-Fenster mit MOS 2.3.3
-2. Im MOS-Prompt (`/progs *`) BASIC starten:
+1. `run.bat` starten (Doppelklick) → Emulator-Fenster
+2. `autoexec.txt` wechselt nach `/progs` und startet BBC BASIC, du landest
+   direkt im `>`-Prompt
+3. Programm laden und starten:
    ```
-   /bin/bbcbasic24
-   ```
-3. In BASIC:
-   ```
-   LOAD "hello.bas"
+   LOAD "ledmatrix.bas"
    RUN
    ```
+
+Zurück ans MOS-Kommandozeile (etwa zum Assemblieren mit `ez80asm`) geht es mit `*BYE`,
+von dort mit `/bin/bbcbasic24` wieder in BASIC.
 
 ## Ordnerstruktur
 
@@ -27,7 +28,7 @@ Arbeitsumgebung für BBC BASIC auf dem Agon Light, komplett lokal und offline la
 | `sdcard/demos/` | Beispielprogramme in BASIC (Cube, Mandelbrot, Sprites, Sound …) |
 | `sdcard/games/` | Fertige Spiele zum Ausprobieren |
 | `sdcard/docs/` | Komplette Agon-Dokumentation (siehe unten) |
-| `sdcard/autoexec.txt` | Wird beim Boot ausgeführt; wechselt aktuell nach `/progs` |
+| `sdcard/autoexec.txt` | Wird beim Boot ausgeführt: wechselt nach `/progs` und startet BBC BASIC |
 | `tools/` | Fab Agon Emulator v1.2.4 (Windows x64) + heruntergeladenes ZIP |
 
 ## Workflow
