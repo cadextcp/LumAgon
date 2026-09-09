@@ -12,3 +12,6 @@
 *.sav
 Thumbs.db
 desktop.ini
+
+# Vom Assembler erzeugt, wird auf dem Agon gebaut
+/sdcard/progs/*.bin

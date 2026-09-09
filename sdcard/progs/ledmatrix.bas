@@ -18,6 +18,7 @@
   180     IF m%=53 THEN PROCsetstyle
   190     IF m%=54 THEN PROCsetbright
   195     IF m%=55 THEN PROCselftest
+  196     IF m%=56 THEN PROCsetbackend
   200 UNTIL m%=48
   210 MODE 3
   220 PRINT "Ende."
@@ -37,10 +38,12 @@
   360 PRINT "  5  Mapping umschalten"
   370 PRINT "  6  Helligkeit einstellen"
   375 PRINT "  7  Selbsttest (nur Text)"
+  376 PRINT "  8  Ausgabe: Vorschau / LED-Wand"
   380 PRINT "  0  Beenden"
   390 PRINT
   400 PRINT "Mapping   : ";FNstylename(style%)
   410 PRINT "Helligkeit: ";bri%;" von 255"
+  415 PRINT "Ausgabe   : ";FNbkname(bk%)
   420 PRINT
   430 PRINT "Auswahl? ";
   440 ENDPROC
@@ -164,12 +167,14 @@
  1595 DIM sk%(np%-1)
  1596 DIM pv%(np%-1)
  1597 DIM cr%(255) : DIM cg%(255) : DIM cb%(255)
+ 1598 DIM bf% np%*32-1
  1600 DIM sn%(63)
  1610 FOR i%=0 TO 63
  1620   sn%(i%)=128+127*SIN(i%*2*PI/64)
  1630 NEXT
  1640 bri%=255
  1645 PROCbuildcol
+ 1646 bk%=0 : gpok%=FALSE
  1650 style%=0
  1660 PROCmapbuild(style%)
  1670 REM Layout der Vorschau in logischen Koordinaten (1280x1024).
@@ -231,8 +236,8 @@
  2190 :
  2200 DEF PROCcls
  2210 LOCAL i%
- 2220 FOR i%=0 TO np%*4-1
- 2230   ?(fb%+i%)=0
+ 2220 FOR i%=0 TO np%-1
+ 2230   !(fb%+i%*4)=0
  2240 NEXT
  2250 ENDPROC
  2260 :
@@ -240,7 +245,8 @@
  2280 REM Einziger Ort, an dem der Framebuffer ausgegeben wird. In M2
  2290 REM kommt hier das GPIO-Backend daneben; alles darueber bleibt gleich.
  2300 DEF PROCshow
- 2310 PROCrendervdp
+ 2310 IF bk%<>1 THEN PROCrendervdp
+ 2315 IF bk%>0 THEN PROCsendgpio
  2320 ENDPROC
  2330 :
  2340 DEF PROCrendervdp
@@ -368,3 +374,52 @@
  3410   cr%(v%)=q%*16 : cg%(v%)=q%*4 : cb%(v%)=q%
  3420 NEXT
  3430 ENDPROC
+ 3440 :
+ 3450 REM ================================================================
+ 3460 REM  GPIO-Backend (M2) - Ausgabe an die echte LED-Kette
+ 3470 REM ================================================================
+ 3480 REM Die zeitkritische Bitausgabe steckt in ws2812.bin, erzeugt aus
+ 3490 REM ws2812.asm. BASIC liefert nur den Framebuffer und die Adressen.
+ 3500 REM Ladeadresse &B0000 ist der MOS-Bereich fuer Star-Command-
+ 3510 REM Programme; ein dort gestartetes Moslet wuerde den Code
+ 3520 REM ueberschreiben, deshalb die Pruefung in PROCsendgpio.
+ 3530 DEF PROCgpioload
+ 3540 OSCLI("LOAD ws2812.bin &B0000")
+ 3550 CALL &B0004
+ 3560 gpok%=TRUE
+ 3570 ENDPROC
+ 3580 :
+ 3590 DEF PROCsendgpio
+ 3600 IF NOT gpok% THEN ENDPROC
+ 3610 IF ?&B0000<>&C3 THEN PROCgpioload
+ 3620 !&B0008=fb%
+ 3630 !&B000C=bf%
+ 3640 !&B0010=np%*4
+ 3650 CALL &B0000
+ 3660 ENDPROC
+ 3670 :
+ 3680 REM Umschalten zwischen Vorschau, echter Ausgabe und beidem.
+ 3690 REM Beim ersten Einschalten wird die Routine nachgeladen; fehlt
+ 3700 REM ws2812.bin, faellt das Programm auf reine Vorschau zurueck.
+ 3710 DEF PROCsetbackend
+ 3720 MODE 3
+ 3730 PRINT "Ausgabe"
+ 3740 PRINT "======="
+ 3750 PRINT
+ 3760 PRINT "  0  nur Bildschirm-Vorschau"
+ 3770 PRINT "  1  nur LED-Wand (GPIO, PC4 = Pin 21)"
+ 3780 PRINT "  2  beides"
+ 3790 PRINT
+ 3800 PRINT "Auswahl? ";
+ 3810 s%=GET-48
+ 3820 IF s%<0 OR s%>2 THEN ENDPROC
+ 3830 IF s%=0 THEN bk%=0 : ENDPROC
+ 3840 ON ERROR LOCAL PRINT "ws2812.bin fehlt - bleibe bei Vorschau" : gpok%=FALSE : bk%=0 : t%=GET : ENDPROC
+ 3850 IF NOT gpok% THEN PROCgpioload
+ 3860 bk%=s%
+ 3870 ENDPROC
+ 3880 :
+ 3890 DEF FNbkname(b%)
+ 3900 IF b%=0 THEN ="nur Vorschau"
+ 3910 IF b%=1 THEN ="nur LED-Wand"
+ 3920 ="Vorschau und LED-Wand"
