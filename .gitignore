@@ -1,0 +1,14 @@
+# Emulator und Downloads: Fremd-Binaries, werden nicht versioniert.
+# Wiederherstellen siehe README.md -> "Einrichtung auf einem neuen Rechner".
+/tools/
+
+# Die SD-Karte besteht groesstenteils aus dem popup-mos Template (Fremdinhalt).
+# Versioniert werden nur die eigenen Teile.
+/sdcard/*
+!/sdcard/progs/
+!/sdcard/autoexec.txt
+
+# Vom Emulator/Agon erzeugt
+*.sav
+Thumbs.db
+desktop.ini
