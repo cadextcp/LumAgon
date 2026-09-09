@@ -134,7 +134,7 @@ landet als `matrix.map` auf der SD-Karte und wird von allen Programmen geladen.
 | | Inhalt | Hardware nötig |
 |---|---|---|
 | **M0** ✓ | Framebuffer, Mapping-Tabelle, Renderer-Schicht, VDP-Bildschirmvorschau | nein |
-| **M1** | Kalibrierprogramm, `matrix.map` laden/speichern | Matrix |
+| **M1** ✓ | Kalibrierprogramm, `matrix.map` laden/speichern | Matrix |
 | **M2** ~ | Assembler-Ausgaberoutine geschrieben und eingebunden; Timing noch offen | alles |
 | **M3** | Integration, erste Animation auf der Wand | alles |
 | **M4** | Effektbibliothek: Lauflicht, Plasma, Text-Scroller, Bilder von SD | alles |
@@ -143,9 +143,13 @@ M0 und M1 sind vollständig ohne angeschlossene Hardware entwickelbar.
 
 ## 8. Risiken
 
-**M2 ist der kritische Punkt.** Ob Bit-Test, Ausgabe und Schleifenlogik in 23 Takte passen,
-entscheidet sich erst beim Auszählen; vermutlich muss die Schleife pro Byte ausgerollt
-werden. Greift sonst Plan B.
+**M2 ist der kritische Punkt.** Die Zyklenrechnung geht auf (Abschnitt 11), aber nur
+rechnerisch — ob die reale Hardware dieselben Zeiten liefert, ist offen. Der Emulator kann
+es nicht beantworten. Greift sonst Plan B.
+
+*Erledigt:* Die ursprüngliche Sorge, die Schleife müsse pro Byte ausgerollt werden, hat sich
+nicht bestätigt — im Gegenteil, das Ausrollen war mit 152 Byte zu weit für einen relativen
+Sprung, und die Schleife über einzelne Bits geht exakt auf.
 
 **Inline-Assembler im ADL-Modus.** `bbcbasic24` läuft in ADL, dokumentiert ist für den
 Inline-Assembler aber nur 8-Bit-Z80. Falls das kollidiert, bauen wir die Routine mit
@@ -263,6 +267,59 @@ die Struktur bleibt.
 
 Bleibt das Timing instabil, greift Plan B aus Abschnitt 4: Bei SPI erzeugt die Hardware
 das Bitmuster, unabhängig von Instruktionszeiten und Wartezyklen.
+
+## 12. Stand M1 — Kalibrierung
+
+`sdcard/progs/calib.bas`, eigenständig und im Textmodus, damit es auch ohne
+funktionierende Grafik bedienbar bleibt.
+
+### Kandidatenverfahren
+
+Statt die Topologie aus Messpunkten zu *erraten*, werden alle 16 denkbaren
+Verdrahtungen aufgestellt und nacheinander ausgeschlossen:
+
+| Bit | Bedeutung |
+|---|---|
+| 0 | Serpentine statt progressiv |
+| 1 | spaltenweise statt zeilenweise |
+| 2 | in x gespiegelt |
+| 3 | in y gespiegelt |
+
+Das Programm zündet einzelne LEDs (0, 1, 12, 13, 24), die Position wird im Raster
+markiert, und jede Variante, die dazu nicht passt, fällt weg. Sobald nur eine übrig ist,
+steht die Verdrahtung fest — meist nach zwei bis drei LEDs.
+
+Der Selbsttest prüft das erschöpfend: Für jede der 16 Verdrahtungen wird geprüft, ob sie
+sich aus den Stützstellen wiederfinden lässt. Ergebnis: **alle 16 eindeutig, kein einziger
+mehrdeutiger Fall.**
+
+Für Sonderfälle — vertauschte Segmente, Lötfehler, gemischte Laufrichtungen — gibt es
+zusätzlich die vollständige Kalibrierung LED für LED.
+
+### Dateiformat `matrix.map`
+
+| Offset | Inhalt |
+|---|---|
+| 0 | Breite |
+| 1 | Höhe |
+| 2 … | je Position ein Byte mit dem LED-Index, zeilenweise von oben links |
+
+Bei 12×12 also 146 Byte. Bewusst binär statt Text: `BPUT#`/`BGET#` sind in BBC BASIC (Z80)
+verlässlich verfügbar, während zeilenweises Text-I/O es nicht ist. Nachvollziehbar bleibt
+die Datei über Menüpunkt 6, der die Tabelle anzeigt und prüft, ob jeder Index genau einmal
+vorkommt.
+
+`ledmatrix.bas` lädt `matrix.map` beim Start automatisch; die Kalibrierung hat Vorrang vor
+den eingebauten Formeln und erscheint als Mapping-Stil 3.
+
+### Verifiziert
+
+Kandidatenverfahren für alle 16 Varianten, Schreiben und Lesen der Datei im Rundlauf, und
+der Dateiinhalt Byte für Byte gegen die Formel nachgerechnet — null Abweichungen, jeder
+Index genau einmal. Die Übernahme in `ledmatrix.bas` wurde mit einer Testkarte geprüft.
+
+Nicht verifizierbar ohne Hardware: ob die Cursortasten die erwarteten Codes 136–139
+liefern. Deshalb funktioniert die Rastereingabe alternativ mit **W/A/S/D**.
 
 ## Quellen
 

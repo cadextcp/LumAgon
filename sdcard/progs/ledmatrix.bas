@@ -136,10 +136,13 @@
  1310 PRINT "  0  Serpentine zeilenweise (Standard)"
  1320 PRINT "  1  Progressiv zeilenweise"
  1330 PRINT "  2  Serpentine spaltenweise"
+ 1332 PRINT "  3  aus matrix.map (von calib.bas erzeugt)"
  1340 PRINT
  1350 PRINT "Auswahl? ";
  1360 s%=GET-48
  1370 IF s%>=0 AND s%<=2 THEN style%=s% : PROCmapbuild(style%)
+ 1372 IF s%=3 THEN PROCloadmap : IF NOT mapok% THEN PRINT : PRINT "matrix.map nicht gefunden oder passt nicht." : t%=GET
+ 1375 PROCinvalidate
  1380 ENDPROC
  1390 :
  1400 DEF PROCsetbright
@@ -177,6 +180,8 @@
  1646 bk%=0 : gpok%=FALSE
  1650 style%=0
  1660 PROCmapbuild(style%)
+ 1665 REM Liegt eine Kalibrierung vor, hat sie Vorrang.
+ 1667 PROCloadmap
  1670 REM Layout der Vorschau in logischen Koordinaten (1280x1024).
  1680 REM 80x85 pro Zelle ergibt physisch quadratische 20x20 Pixel.
  1690 gx%=160 : gy%=937 : cw%=80 : ch%=85
@@ -188,6 +193,10 @@
  1740 REM Tabelle statt Formel, damit spaeter auch eine per Kalibrierung
  1750 REM ermittelte oder fehlerhafte Verdrahtung abbildbar ist (M1).
  1760 DEF PROCmapbuild(st%)
+ 1762 REM Stil 3 ist keine Formel, sondern die kalibrierte Tabelle.
+ 1764 REM Ohne diese Weiche wuerde die Schleife unten sie mit Nullen
+ 1766 REM ueberschreiben, sobald jemand PROCmapbuild(style%) aufruft.
+ 1768 IF st%=3 THEN PROCloadmap : ENDPROC
  1770 LOCAL x%,y%,i%
  1780 FOR y%=0 TO ht%-1
  1790   FOR x%=0 TO wd%-1
@@ -205,6 +214,7 @@
  1910 DEF FNstylename(s%)
  1920 IF s%=0 THEN ="Serpentine zeilenweise"
  1930 IF s%=1 THEN ="Progressiv zeilenweise"
+ 1935 IF s%=3 THEN ="aus matrix.map (kalibriert)"
  1940 ="Serpentine spaltenweise"
  1950 :
  1960 REM ---- Framebuffer ----------------------------------------------
@@ -423,3 +433,27 @@
  3900 IF b%=0 THEN ="nur Vorschau"
  3910 IF b%=1 THEN ="nur LED-Wand"
  3920 ="Vorschau und LED-Wand"
+ 3930 :
+ 3940 REM ================================================================
+ 3950 REM  Kalibriertes Mapping laden (M1)
+ 3960 REM ================================================================
+ 3970 REM matrix.map wird von calib.bas geschrieben: Byte 0 Breite,
+ 3980 REM Byte 1 Hoehe, danach je Position ein Byte mit dem LED-Index.
+ 3990 REM Fehlt die Datei, bleibt das eingestellte Standard-Mapping.
+ 4000 DEF PROCloadmap
+ 4010 LOCAL f%,x%,y%,w%,h%
+ 4020 mapok%=FALSE
+ 4030 f%=OPENIN("matrix.map")
+ 4040 IF f%=0 THEN ENDPROC
+ 4050 w%=BGET#f%
+ 4060 h%=BGET#f%
+ 4070 IF w%<>wd% OR h%<>ht% THEN CLOSE#f% : ENDPROC
+ 4080 FOR y%=0 TO ht%-1
+ 4090   FOR x%=0 TO wd%-1
+ 4100     mp%(x%,y%)=BGET#f%
+ 4110   NEXT
+ 4120 NEXT
+ 4130 CLOSE#f%
+ 4140 mapok%=TRUE
+ 4150 style%=3
+ 4160 ENDPROC
