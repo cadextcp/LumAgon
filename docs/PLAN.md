@@ -321,6 +321,52 @@ Index genau einmal. Die Übernahme in `ledmatrix.bas` wurde mit einer Testkarte 
 Nicht verifizierbar ohne Hardware: ob die Cursortasten die erwarteten Codes 136–139
 liefern. Deshalb funktioniert die Rastereingabe alternativ mit **W/A/S/D**.
 
+## 13. Firmware-Kompatibilität
+
+Der Emulator bringt mehrere MOS-Versionen mit. Getestet wurde gegen beide relevanten:
+
+| | Console8 MOS 2.3.3 | Agon Platform MOS 3.0.2 |
+|---|---|---|
+| `PAGE` / `HIMEM` | `&44E00` / `&B0000` | **identisch** |
+| `*LOAD ws2812.bin &B0000` | ✓ | ✓ |
+| `CALL &B0004` / `CALL &B0000` | ✓ | ✓ |
+| Selbsttest `ledmatrix.bas` | ✓ | ✓ |
+| Selbsttest `calib.bas` | ✓ | ✓ |
+| BASIC starten | `/bin/bbcbasic24` | `bbcbasic24` |
+
+**Der einzige Unterschied ist der Startbefehl.** MOS 3 hat einen Suchpfad und findet
+`bbcbasic24` ohne Pfadangabe; MOS 2.3.3 kennt den nicht und braucht `/bin/`. Umgekehrt
+lehnt MOS 3 die Schreibweise mit Pfad als „Invalid command" ab.
+
+Entscheidend für dieses Projekt: **`HIMEM` liegt in beiden Versionen bei `&B0000`**, die
+Ladeadresse der Assembler-Routine gilt also für beide.
+
+### Folge für `autoexec.txt`
+
+Eine Fassung, die auf beiden läuft, gibt es nicht — schlägt eine Zeile fehl, bricht MOS die
+Datei ab. Die mitgelieferte Fassung ist auf MOS 2.3.3 ausgelegt, passend zu `run.bat`:
+
+```
+cd /progs
+/bin/bbcbasic24
+```
+
+Läuft auf der echten Hardware MOS 3.x, ist Zeile 2 zu `bbcbasic24` zu ändern.
+
+### Emulator-Firmware wählen
+
+`run.bat` legt `--firmware console8` fest, damit das Fenster dieselbe Firmware nutzt wie
+der CLI-Emulator, gegen den alles getestet ist. Ohne die Option nähme der GUI-Emulator
+`platform`.
+
+Der CLI-Emulator ignoriert `--firmware`, akzeptiert aber `--mos`:
+
+```bash
+agon-cli-emulator.exe --mos firmware/mos_platform.bin --sdcard ../../sdcard
+```
+
+Damit lassen sich beide Firmwares headless testen.
+
 ## Quellen
 
 - [Agon GPIO-Dokumentation](https://agonplatform.github.io/agon-docs/GPIO/)

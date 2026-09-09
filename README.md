@@ -16,6 +16,12 @@ Arbeitsumgebung für BBC BASIC auf dem Agon Light, komplett lokal und offline la
 Zurück ans MOS-Kommandozeile (etwa zum Assemblieren mit `ez80asm`) geht es mit `*BYE`,
 von dort mit `/bin/bbcbasic24` wieder in BASIC.
 
+> **Firmware:** `run.bat` startet den Emulator mit `--firmware console8` (MOS 2.3.3),
+> derselben Firmware wie der CLI-Emulator. Unter Agon Platform MOS 3.x heisst der Befehl
+> zum Start von BASIC `bbcbasic24` **ohne** Pfad — dann ist auch Zeile 2 der
+> `autoexec.txt` entsprechend zu ändern. Details in [docs/PLAN.md](docs/PLAN.md),
+> Abschnitt 13.
+
 ## Ordnerstruktur
 
 | Pfad | Inhalt |
