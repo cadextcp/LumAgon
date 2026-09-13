@@ -13,7 +13,7 @@ Alles liegt in `sdcard/progs/`:
 | `ledmatrix.bas` | Hauptprogramm: Framebuffer, Mapping, Vorschau, Demos, GPIO-Ausgabe | läuft, Grafik ungeprüft |
 | `calib.bas` | Kalibrierung bzw. Prüfung der Verdrahtung, schreibt `matrix.map` | Logik verifiziert |
 | `ledtest.bas` | Minimalprogramm für die erste Inbetriebnahme, ohne Grafik | läuft |
-| `ws2812.asm` | zeitkritische Bitausgabe auf PC4 mit Pixelverdopplung und Helligkeitsbremse | Entpacken verifiziert, Timing ungeprüft |
+| `ws2812.asm` | zeitkritische Bitausgabe auf PC4 mit Pixelverdopplung und Helligkeitsbremse | Timing am Gerät bestätigt (2026-09-13) |
 | `wstest.bas` | Selbsttest für `ws2812.bin`: Entpacken, Verdopplung, Helligkeit | alles OK |
 | `matrix.map` | Verdrahtung der Lumanode-Wand, erzeugt von `scripts/gen_lumanode_map.py` | geprüft |
 | `scripts/agonmon.py` | Terminal über USB (Konsolenmodus des VDP) | Weg auf dem Agon geprüft, Skript selbst nicht interaktiv |
@@ -25,24 +25,22 @@ Alles liegt in `sdcard/progs/`:
 Lumanode-Projekt: 288 LEDs, echte Verdrahtung, Strombremse (Abschnitt 14). Betrieb ohne
 Bildschirm mit Autostart, Tönen und Konsole über USB, auf dem Agon geprüft (Abschnitt 15).
 Drei MOS-Versionen geprüft (Abschnitt 13). Dateien gehen per USB auf die Karte im Agon
-(Abschnitt 16).
+(Abschnitt 16). Pegelwandler aufgebaut, am Testmodul in Betrieb genommen und das
+SK6812-Timing am echten Gerät bestätigt: LED-Test komplett durchgelaufen, Schritt 6
+schwaches gleichmäßiges Weiß (Abschnitte 5 und 11, Stand 2026-09-13).
 
 **Offen — braucht Hardware:**
 
-1. **Das SK6812-Timing.** Rechnerisch geht es auf, gemessen ist es nicht. Der Emulator
-   zählt keine echten Zyklen, kann es also nicht beantworten (Abschnitt 11).
-2. **Tastenverlust während der LED-Ausgabe** — gemessen, nicht gelöst (Abschnitt 8).
-3. **Die Bildschirmvorschau** wurde nie angesehen — nur geprüft, dass sie fehlerfrei
+1. **Tastenverlust während der LED-Ausgabe** — gemessen, nicht gelöst (Abschnitt 8).
+2. **Die Bildschirmvorschau** wurde nie angesehen — nur geprüft, dass sie fehlerfrei
    durchläuft und die Farbwerte stimmen.
-4. **M3 und M4** (Integration an der Wand, Effektbibliothek).
+3. **M3 und M4** (Integration an der Wand, Effektbibliothek).
 
-**Nächster Schritt:** Pegelwandler nach Abschnitt 5 aufbauen, den Arduino von der
-Datenleitung trennen, das Testmodul anschließen und im Menü von `start.bas` (Abschnitt 15)
-eine Taste drücken. Zeigt Schritt 6 des LED-Tests statt schwachem Weiß bunte Farben, stimmt
-das Timing nicht — dann sind die NOPs in `ws2812.asm` anzupassen oder Plan B (SPI,
-Abschnitt 4) zu ziehen. Vorher das bekannte
-defekte Modul reparieren (Abschnitt 5), sonst ist ein Timingfehler nicht von dessen
-Aussetzern zu unterscheiden.
+**Nächster Schritt:** Vor der Wand-Integration (M3) das bekannte defekte Modul reparieren
+(altes Modul 6, heute Kettenposition 30 — Ausgangs-Crimps/Lötstellen erneuern, siehe
+Abschnitt 5 und `debugFreeze.md` im Lumanode-Projekt), sonst sind dessen Aussetzer von
+echten Fehlern nicht zu unterscheiden. Danach die Wand nach Abschnitt 5 verkabeln und mit
+`calib.bas` (Menüpunkt 3) die Verdrahtung an der ganzen Kette prüfen.
 
 ## 1. Ausgangslage
 
@@ -81,6 +79,12 @@ Frei nutzbar sind `PC0`–`PC7` (Pins 17–24) und `PD4`–`PD7` (Pins 13–16).
 | +5 V (für Pegelwandler) | 4 — laut Olimex bis 1,8 A frei, per LiPo-USV gepuffert |
 | +3,3 V | 34 |
 | SPI MOSI / SCK (Plan B) | 32 / 31 |
+
+Pin-1-Lage am Gerät (2026-09-13, vom Nutzer abgelesen und nachgemessen): Die Stifte sind
+beschriftet, **Pin 1 oben rechts, Pin 2 darunter**, gezählt wird spaltenweise nach links
+(ungerade oben, gerade unten). Gegenprobe mit schwarzer Spitze an Pin 3: Pin 4 = 5,15 V,
+Pin 2 = 4,95 V (dieselbe USB-5-V-Leitung), Pin 33 = 0 V, Pin 34 = 3,2 V. Pin 21 liegt in
+der elften Spalte von rechts, obere Reihe.
 
 **Alle GPIOs arbeiten mit 3,3 V und sind nicht 5-V-tolerant** — laut Olimex-Handbuch
 beschädigt ein 5-V-Signal das Board.
@@ -171,10 +175,11 @@ Agon Pin 21 (PC4) ----+---------------->  2 1A
   sind nicht 5-V-tolerant. Den 74AHCT125 vom Agon-5-V-Pin versorgen: Dann liegt nie ein
   High an seinem Eingang, während er selbst stromlos ist.
 - **100 nF** direkt an VCC/GND des 74AHCT125.
-- **10 kΩ Pull-down** an 1A: Nach dem Reset ist PC4 ein Eingang und würde sonst offen
+- **10 kΩ Pull-down** an 1A (4,7–47 kΩ gehen; aufgebaut mit 8,2 kΩ): Nach dem Reset ist PC4 ein Eingang und würde sonst offen
   auf die LEDs rauschen. Beim ersten Einschalten messen: 1A muss unter 0,8 V liegen.
 - Unbenutzte Kanäle: OE̅ an VCC (Ausgang hochohmig), Eingänge an GND (nicht offen lassen).
-- **330 Ω** in der Datenleitung dämpft Reflexionen.
+- **330 Ω** in der Datenleitung dämpft Reflexionen; alles von 220 bis 470 Ω geht
+  (aufgebaut mit 390 Ω).
 - **1000 µF** über +12 V/GND direkt an der Matrix gegen Einschaltspitzen.
 - Die **gemeinsame Masse ist nicht optional** — ohne sie hat das Datensignal keinen Bezug.
 - **Arduino von DIN trennen** (Pin 13): Zwei Treiber auf einer Leitung sind nicht erlaubt.
@@ -227,7 +232,7 @@ Menüpunkt 3 läuft die Kette ab und zeigt parallel, wo jeder Pixel leuchten mus
 |---|---|---|
 | **M0** ✓ | Framebuffer, Mapping-Tabelle, Renderer-Schicht, VDP-Bildschirmvorschau | nein |
 | **M1** ✓ | Kalibrierprogramm, `matrix.map` laden/speichern | Matrix |
-| **M2** ~ | Assembler-Ausgaberoutine mit Verdopplung und Helligkeitsbremse; Entpacken verifiziert, Timing offen | alles |
+| **M2** ✓ | Assembler-Ausgaberoutine mit Verdopplung und Helligkeitsbremse; Timing am Gerät bestätigt (Abschnitt 11) | alles |
 | **L** ✓ | Abgleich mit dem Lumanode-Projekt (Abschnitt 14) | nein |
 | **H** ✓ | Betrieb ohne Bildschirm: Autostart, Töne, Konsole über USB (Abschnitt 15) | Agon |
 | **M3** | Integration, erste Animation auf der Wand | alles |
@@ -237,10 +242,11 @@ M0 und M1 sind vollständig ohne angeschlossene Hardware entwickelbar.
 
 ## 8. Risiken
 
-**M2 ist der kritische Punkt.** Die Zyklenrechnung geht auf (Abschnitt 11), aber nur
-rechnerisch — ob die reale Hardware dieselben Zeiten liefert, ist offen. Wartezyklen beim
-Codeabruf aus dem externen RAM oder beim I/O-Zugriff würden alles verschieben. Der Emulator
-kann es nicht beantworten. Greift sonst Plan B.
+**M2 war der kritische Punkt** — seit dem 2026-09-13 entkräftet: Das Timing läuft am
+echten Gerät ohne NOP-Anpassung (Abschnitt 11). Hintergrund des ursprünglichen Risikos:
+Die Zyklenrechnung ging nur rechnerisch auf; Wartezyklen beim Codeabruf aus dem externen
+RAM oder beim I/O-Zugriff hätten alles verschieben können, und der Emulator kann es nicht
+beantworten. Plan B (SPI) bleibt als Fallback dokumentiert.
 
 **Tastenverlust während der LED-Ausgabe — gemessen.** Ein Frame sperrt die Interrupts
 11,5 ms; UART0 zum VDP (1.152.000 Baud, 16-Byte-FIFO) läuft in dieser Zeit über. Gemessen
@@ -421,20 +427,23 @@ die Rechnung:
 
 In allen Läufen blieb der Speicher hinter dem erwarteten Pufferende unberührt.
 
-**Nicht verifizierbar ist das Timing selbst.** Ein Kalibriertest (`cyctest.asm`) mit zwei
-Schleifen, die sich laut Manual um Faktor drei unterscheiden müssten (6 gegen 17 Takte),
-lieferte im Emulator **identische Laufzeiten**. Der Fab Agon Emulator zählt also keine
-echten Instruktionszyklen. Damit sind auch die dort gemessenen Frame-Zeiten bedeutungslos
-für die reale Hardware.
+**Am 2026-09-13 auf echter Hardware bestätigt:** Der komplette LED-Test aus `start.bas`
+lief über den Pegelwandler (Aufbau nach `AUFBAU-PEGELWANDLER.md`, 390 Ω Datenwiderstand,
+8,2 kΩ Pull-down) am 4-Pixel-Testmodul durch alle sechs Schritte; Schritt 6 zeigte
+schwach, gleichmäßig weiß auf allen 8 LEDs. Die Zyklenrechnung stimmt also auch an der
+echten Hardware — keine NOP-Anpassung nötig, Plan B (SPI, Abschnitt 4) vorerst ad acta.
+Der Emulator bleibt ungeeignet für Timingfragen: `cyctest.asm` lieferte dort identische
+Laufzeiten für Schleifen, die sich laut Manual um Faktor drei unterscheiden müssten.
 
-Die Auslegung nach den Manual-Zyklen ist das Beste, was ohne Gerät möglich ist. Die
-Verifikation muss an der echten Wand erfolgen — idealerweise mit Logikanalysator, sonst
-über `ledtest.bas`: Zeigt Test 3 statt schwachem Weiß bunte Farben, stimmt das Timing
-nicht. Anzupassen ist dann ausschließlich die Anzahl der NOPs zwischen den `out`-Befehlen;
-die Struktur bleibt.
+**Zwei Fallen dabei gelernt:**
 
-Bleibt das Timing instabil, greift Plan B aus Abschnitt 4: Bei SPI erzeugt die Hardware
-das Bitmuster, unabhängig von Instruktionszeiten und Wartezyklen.
+- Der „Dauertest" von `start.bas` beendet sich **selbst nach rund 311 Frames (~8 s)**
+  mit der Schlusszeile — er läuft nicht endlos. Für Dauermessungen am Datenpin stattdessen
+  von BASIC `REPEAT CALL &B0000 UNTIL FALSE` starten (ESC bricht ab).
+- Jeder `LOAD ws2812.bin &B0000` setzt den Parameterblock auf die Nullen des Binärs
+  zurück. Ein direkter `CALL &B0000` ohne vorheriges Setzen von `!&B0008`/`!&B000C`/
+  `!&B0010` (wie es `PROCsendgpio` in `start.bas` vor jedem Frame macht) läuft dann in
+  `jr z, sendend` und tut **still nichts** — der Pin bleibt Low, ohne Fehlermeldung.
 
 ## 12. Stand M1 — Kalibrierung
 
@@ -595,9 +604,10 @@ Der Agon hat keinen Monitor, nur Tastatur und Kopfhörer. Dafür:
 | Programm ändern ohne Umstecken | Zeilen über USB eingetippt, `SAVE "/progs/start.bas"`, `RUN` |
 | Töne | nach der Kanal-Korrektur alle drei Noten hörbar |
 | Tasten während der Ausgabe | gehen teilweise verloren (Abschnitt 8) |
+| LED-Test am Testmodul | 2026-09-13: alle sechs Schritte über den Pegelwandler, Schritt 6 schwaches Weiß (Abschnitt 11) |
 
-Ob die LEDs richtig leuchten, zeigt erst das angeschlossene Modul — der Datenpin ist
-noch nicht gemessen.
+Erledigt (2026-09-13): Der LED-Test lief am angeschlossenen Testmodul über den
+Pegelwandler durch — schwaches, gleichmäßiges Weiß in Schritt 6.
 
 Die per `SAVE` geschriebene `start.bas` auf der Karte ist inzwischen per
 `scripts/agonload.py` durch die Fassung aus dem Repo ersetzt und am Gerät gegengeprüft

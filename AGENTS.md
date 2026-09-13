@@ -12,10 +12,11 @@ Lies zuerst **`docs/PLAN.md`, Abschnitt 0** (Kurzfassung, Stand, offene Punkte) 
 - Software fertig und im Emulator geprüft: Framebuffer, Mapping, Pixelverdopplung,
   Helligkeitsbremse, Kalibrierung, Startprogramm mit Tönen (PLAN, Abschnitte 11, 12, 14, 15).
 - Auf dem echten Agon geprüft: Autostart, Töne, Konsole über USB, `ws2812.bin` läuft
-  (37,8 Frames/s), Dateien per USB auf die SD-Karte (PLAN, Abschnitt 16).
-  **Nicht geprüft: ob die LEDs richtig leuchten** — das Timing der Bitausgabe ist nur
-  gerechnet. Nächster Schritt: Testmodul anschließen, LED-Test aus `start.bas`, Schritt 6
-  muss schwaches Weiß zeigen (PLAN, Abschnitt 0).
+  (37,8 Frames/s), Dateien per USB auf die SD-Karte (PLAN, Abschnitt 16). Pegelwandler
+  aufgebaut und am Testmodul erprobt: LED-Test komplett durchgelaufen, Schritt 6 schwaches
+  gleichmäßiges Weiß — **das SK6812-Timing ist bestätigt** (PLAN, Abschnitte 5 und 11).
+  Nächster Schritt: defektes Modul (heute Kettenposition 30) reparieren, dann
+  Wand-Integration M3 (PLAN, Abschnitt 0).
 - Bekanntes Problem: Während der LED-Ausgabe gehen Tastendrücke verloren, RTS-Steuerung
   hilft nicht (PLAN, Abschnitt 8, mit Messwerten und Ideen).
 

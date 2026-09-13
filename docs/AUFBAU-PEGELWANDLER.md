@@ -1,6 +1,8 @@
 # Pegelwandler 3,3 V → 5 V auf dem Breadboard — Schritt für Schritt
 
-Stand: 2026-09-13, nach Review überarbeitet. Basiert auf der Schaltung in
+Stand: 2026-09-13, nach Review überarbeitet und am selben Tag aufgebaut, in Betrieb
+genommen und erprobt: Der LED-Test aus `start.bas` lief über diesen Aufbau komplett
+durch, Schritt 6 zeigte schwaches, gleichmäßiges Weiß. Basiert auf der Schaltung in
 [PLAN.md](PLAN.md), Abschnitt 5. Zielgruppe: ohne Elektronik-Vorkenntnisse. Wer schon
 gelötet hat, liest nur Tabelle und Checkliste.
 
@@ -10,7 +12,7 @@ Der Agon Light 2 gibt auf seinen GPIO-Pins **3,3 V** aus. Die Lumanode-Module we
 **12 V** versorgt; die LED-Chips (SK6812) darin arbeiten intern aber mit **5-V-Logik** und
 erkennen ein 3,3-V-Datensignal nur unzuverlässig. Der Baustein **SN74AHCT125N** nimmt das
 schwache Signal entgegen und gibt es kräftig mit 5 V wieder aus — er ist ein
-„Pegelwandler". Zwischen ihm und den LEDs sitzt noch ein 330-Ω-Widerstand, der Störungen
+„Pegelwandler". Zwischen ihm und den LEDs sitzt noch ein 390-Ω-Widerstand, der Störungen
 auf der Datenleitung dämpft.
 
 Wichtigster Sicherheitsgrundsatz dabei: **Die Agon-Pins vertragen keine 5 V.**
@@ -22,8 +24,8 @@ Kabel zum Agon-Signalpin ist die Leitung vom Agon zum Eingang des Wandlers.
 | Bauteil | Wie du es erkennst |
 |---|---|
 | SN74AHCT125N | schwarzer Chip mit 14 Beinchen in zwei Reihen (DIP-14), Aufdruck „74AHCT125" |
-| Widerstand 330 Ω | 4 Ringe: **orange–orange–braun**–gold · 5 Ringe: **orange–orange–schwarz–schwarz**–braun |
-| Widerstand 10 kΩ | 4 Ringe: **braun–schwarz–orange**–gold · 5 Ringe: **braun–schwarz–schwarz–rot**–braun |
+| Widerstand 390 Ω (Datenleitung) | 4 Ringe: **orange–weiß–braun**–gold · 5 Ringe: **orange–weiß–schwarz–schwarz**–braun |
+| Widerstand 8,2 kΩ (Pull-down) | 4 Ringe: **grau–rot–rot**–gold · 5 Ringe: **grau–rot–schwarz–braun**–braun |
 | Kondensator 100 nF | kleine Keramik-Scheibe oder -Perle, Aufdruck „**104**" |
 | Breadboard | Steckbrett mit Löchern im Raster und zwei Schienenpaaren |
 | Jumperkabel | weiblich–männlich (Agon → Breadboard) und männlich–männlich (auf dem Breadboard) |
@@ -31,6 +33,21 @@ Kabel zum Agon-Signalpin ist die Leitung vom Agon zum Eingang des Wandlers.
 | Kondensator 1000 µF | nur für die große Wand, nicht für das Testmodul — siehe unten |
 
 Farbringe sind im Zweifel schwer zu lesen: Mit dem Multimeter im Ohm-Bereich nachmessen.
+
+**Andere Widerstandswerte gehen auch:**
+
+- **Datenleitung:** alles von etwa 220 bis 470 Ω. Die Lumanode-Doku empfiehlt
+  220–470 Ω; an der Wand steckt schon ein 390 Ω vor LED 49. Die Schaltung in PLAN.md
+  nennt 330 Ω, aufgebaut wird mit 390 Ω.
+- **Pull-down:** alles von 4,7 bis 47 kΩ — 15 kΩ geht genauso wie 8,2 kΩ; PLAN.md
+  nennt 10 kΩ.
+- **Nicht als Pull-down taugen Werte von einigen hundert Ohm.** Bei 390 Ω müsste der
+  Agon-Pin bei jedem High-Bit rund 8,5 mA liefern. Das belastet ihn unnötig, und das
+  3,3-V-Signal kann so weit einbrechen, dass der Wandler es nicht mehr sicher erkennt.
+- **Fehlt ein passender Pull-down,** darf er am Testmodul notfalls weg: Dann können die
+  LEDs beim Einschalten kurz zufällig aufblitzen, bis `start.bas` den Pin setzt. Für die
+  ganze Wand ist er Pflicht — zufälliges Vollweiß auf 288 LEDs kann kurz über die
+  Stromgrenze gehen.
 
 **Kondensatoren — was brauchst du wirklich?**
 
@@ -121,13 +138,13 @@ Sammelpunkt für die Datenleitung Richtung LED-Modul.
 |---|---|---|
 | rechter Rand | 2 Brückenkabel | obere rote ↔ untere rote Schiene, obere blaue ↔ untere blaue Schiene |
 | obere Schienen, bei Spalte 19 | 100 nF | ein Beinchen direkt in die rote, eins in die blaue Schiene |
-| Spalte 17, untere Hälfte | 330 Ω (Bein 1) + Modul-Datenkabel | DIN-Knoten Richtung LED-Modul |
+| Spalte 17, untere Hälfte | 390 Ω (Bein 1) + Modul-Datenkabel | DIN-Knoten Richtung LED-Modul |
 | Spalte 20, obere Hälfte | IC-Pin 14 (VCC) | → obere rote Schiene |
 | Spalte 20, untere Hälfte | IC-Pin 1 (OE̅1) | → untere blaue Schiene |
 | Spalte 21, obere Hälfte | IC-Pin 13 (OE̅4) | → obere rote Schiene |
-| Spalte 21, untere Hälfte | IC-Pin 2 (1A) | ← Kabel vom Agon Pin 21; 10 kΩ direkt in die untere blaue Schiene |
+| Spalte 21, untere Hälfte | IC-Pin 2 (1A) | ← Kabel vom Agon Pin 21; 8,2 kΩ direkt in die untere blaue Schiene |
 | Spalte 22, obere Hälfte | IC-Pin 12 (4A) | → obere blaue Schiene |
-| Spalte 22, untere Hälfte | IC-Pin 3 (1Y) | → 330 Ω (Bein 2) |
+| Spalte 22, untere Hälfte | IC-Pin 3 (1Y) | → 390 Ω (Bein 2) |
 | Spalte 23, obere Hälfte | IC-Pin 11 (4Y) | frei |
 | Spalte 23, untere Hälfte | IC-Pin 4 (OE̅2) | → untere rote Schiene |
 | Spalte 24, obere Hälfte | IC-Pin 10 (OE̅3) | → obere rote Schiene |
@@ -168,10 +185,10 @@ dort anpassen und neu ausführen.*
    Schiene.
 6. **Kanal 1 freischalten.** Kabel von Spalte 20 unten (Pin 1, OE̅1) → untere blaue
    Schiene. Damit ist Kanal 1 dauerhaft aktiv.
-7. **10-kΩ-Widerstand (Pull-down).** Ein Beinchen in Spalte 21 unten (dieselben 5 Löcher
+7. **8,2-kΩ-Widerstand (Pull-down).** Ein Beinchen in Spalte 21 unten (dieselben 5 Löcher
    wie das IC-Bein Pin 2), das andere direkt in die untere blaue Schiene. Er hält den
    Eingang nach dem Einschalten ruhig auf Masse, bis der Agon den Pin steuert.
-8. **330-Ω-Widerstand.** Ein Beinchen in Spalte 22 unten (Pin 3, 1Y), das andere in
+8. **390-Ω-Widerstand.** Ein Beinchen in Spalte 22 unten (Pin 3, 1Y), das andere in
    Spalte 17 unten. Das ist der Ausgang Richtung LEDs.
 9. **Prüfen, bevor etwas an den Agon kommt** (Multimeter):
    - **Kurzschlusstest:** Multimeter auf Durchgang (Piepser), Messspitzen an rote und
@@ -195,12 +212,10 @@ Der GPIO-Anschluss des Agon ist die Doppelreihe mit 34 Stiften (2 × 17). Eine
 Reihe trägt die ungeraden Nummern (1, 3, 5 … 33), die andere die geraden
 (2, 4 … 34); Pin-Paare wie 3/4 oder 21/22 stehen sich direkt gegenüber.
 
-> ⚠️ **Ungeprüft:** Wo Pin 1 auf der Platine liegt, ist nicht belegt. Das
-> Olimex-Handbuch nennt nur die Belegung (Pin 1 = Akku-Plus, Pin 2 = 5 V vom USB-Anschluss,
-> Pin 3/5/33 = GND, Pin 4 = +5 V, Pin 34 = +3,3 V); die Abbildung mit der Lage konnten wir
-> nicht auswerten. Vermutet wird Pin 1 in der Ecke am Akku-Anschluss. Die Pinnummer 21 für
-> PC4 stammt aus der Agon-GPIO-Dokumentation (PLAN, Abschnitt 1). **Deshalb ist die
-> Gegenprobe unten Pflicht, bevor das erste Kabel an den Agon kommt.**
+Die Stifte sind auf der Platine beschriftet: **Pin 1 sitzt oben rechts, Pin 2 direkt
+darunter**. Gezählt wird Spalte für Spalte nach links, ungerade Nummern oben, gerade
+unten. Elektrisch gegenprüft am 2026-09-13, schwarze Spitze an Pin 3: Pin 4 = 5,15 V,
+Pin 2 = 4,95 V (hängt wie Pin 4 an der USB-5-V-Leitung), Pin 33 = 0 V, Pin 34 = 3,2 V.
 
 | Agon-Pin | Signal | Wohin |
 |---|---|---|
@@ -216,15 +231,16 @@ gegenüber Pin 4 (+5 V). Pin 21 liegt in derselben Längsreihe wie Pin 1, als
 elfte Spalte von der Pin-1-Ecke aus gezählt (bzw. siebte von der anderen Seite);
 ihm gegenüber liegt Pin 22.
 
-**Gegenprobe (Pflicht):** Agon per USB einschalten, noch nichts angesteckt. Multimeter
-auf Gleichspannung, schwarze Messspitze an den gezählten Pin 3.
+**Gegenprobe** (am 2026-09-13 bestanden, Werte siehe oben): Agon per USB einschalten,
+noch nichts angesteckt. Multimeter auf Gleichspannung, schwarze Messspitze an den
+gezählten Pin 3.
 
 - Rote Spitze an den gezählten **Pin 4**: **≈ 5 V**.
 - Rote Spitze an den gezählten **Pin 34** (letzte Spalte, Reihe der geraden Nummern):
   **≈ 3,3 V**.
 
 Stimmen beide Werte, stimmt die Zählrichtung. Sonst: nicht anstecken, Zählung
-wiederholen — vermutlich liegt Pin 1 in der anderen Ecke.
+wiederholen.
 
 ### Netzteil und Testmodul
 
@@ -265,7 +281,7 @@ entfällt er.
 6. Gemeinsame Masse: Agon Pin 3, Netzteil-Minus und Modul-GND treffen sich auf den
    blauen Schienen.
 7. Arduino-Pin-13-Draht ist abgezogen.
-8. 10 kΩ in Spalte 21 unten → untere blaue Schiene; 330 Ω in Spalte 22 unten →
+8. 8,2 kΩ in Spalte 21 unten → untere blaue Schiene; 390 Ω in Spalte 22 unten →
    Spalte 17 unten; Datenkontakt des Moduls in Spalte 17 unten.
 
 Messpunkte (nach dem Einschalten):
@@ -299,7 +315,7 @@ Timing-Problem der Bitausgabe — Kette nicht weiterbauen, sondern melden
 |---|---|
 | Agon startet nicht oder piept nicht, sobald das Breadboard dran ist | Sofort USB abziehen. Kurzschluss zwischen roter und blauer Schiene? Kurzschlusstest aus Schritt 9 wiederholen. |
 | Modul komplett dunkel | 12 V am Modul? Gemeinsame Masse (blaue Schiene) verbunden? Datenkontakt wirklich am *Eingang* des Moduls? |
-| Alles an, aber keine Reaktion auf den Test | Brücken rot ↔ rot, blau ↔ blau gesteckt? 330 Ω in den richtigen Spalten? Kabel vom Agon Pin 21 wirklich in Spalte 21 unten, nicht auf einem Y-Ausgang? |
+| Alles an, aber keine Reaktion auf den Test | Brücken rot ↔ rot, blau ↔ blau gesteckt? 390 Ω in den richtigen Spalten? Kabel vom Agon Pin 21 wirklich in Spalte 21 unten, nicht auf einem Y-Ausgang? |
 | LEDs leuchten, aber falsch/bunt | Timing — siehe Abschnitt 9 |
 
 Zur Einordnung: Das bekannte Problemmodul (altes Modul 6, heute Kettenposition 30,
