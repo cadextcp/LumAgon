@@ -7,13 +7,16 @@
    70 REM  stimmen. Absichtlich sehr dunkel, damit der Strom klein
    80 REM  bleibt und ein Verdrahtungsfehler nichts beschaedigt.
    90 REM
+   92 REM  Lumanode: 2 LEDs je Pixel. ws2812.asm sendet jeden der 144
+   94 REM  Eintraege zweimal (288 LEDs) und begrenzt jeden Kanal auf
+   96 REM  hoechstens 90 von 255 - 60 im Programm sind am Draht ~20.
   100 REM  Voraussetzung: ws2812.bin liegt im selben Verzeichnis.
   110 REM    /bin/ez80asm ws2812.asm ws2812.bin -oB0000 -a1
   120 REM ================================================================
   130 :
-  140 nl%=144
+  140 nl%=144 : REM Pixel = Framebuffer-Eintraege
   150 DIM fb% nl%*4-1
-  160 DIM bf% nl%*32-1
+  160 DIM bf% nl%*64-1 : REM 8 Byte je fb-Byte, 2 LEDs je Pixel
   170 :
   180 PRINT "LED-Wand Inbetriebnahme"
   190 PRINT "======================="
@@ -28,31 +31,31 @@
   280 PRINT
   290 :
   300 REM ---- Test 1: nur die erste LED, ein Kanal nach dem anderen ----
-  310 PRINT "Test 1 - LED 0 einzeln"
-  320 PROCone(0,20,0,0,0,"rot")
-  330 PROCone(0,0,20,0,0,"gruen")
-  340 PROCone(0,0,0,20,0,"blau")
-  350 PROCone(0,0,0,0,20,"weiss (W-Kanal)")
+  310 PRINT "Test 1 - Pixel 0 (LED 0 und 1) einzeln"
+  320 PROCone(0,60,0,0,0,"rot")
+  330 PROCone(0,0,60,0,0,"gruen")
+  340 PROCone(0,0,0,60,0,"blau")
+  350 PROCone(0,0,0,0,60,"weiss (W-Kanal)")
   360 PRINT
   370 :
   380 REM ---- Test 2: die ersten zwoelf LEDs, zeigt die Kettenrichtung -
-  390 PRINT "Test 2 - LED 0 bis 11 nacheinander"
+  390 PRINT "Test 2 - Pixel 0 bis 11 in Kettenfolge"
   400 FOR i%=0 TO 11
   410   PROCclear
-  420   PROCset(i%,15,15,15,0)
+  420   PROCset(i%,45,45,45,0)
   430   PROCsend
-  440   PRINT "  LED ";i%;" - Taste";
+  440   PRINT "  Pixel ";i%;" = LED ";i%*2;"+";i%*2+1;" - Taste";
   450   t%=GET
   460   PRINT
   470 NEXT
   480 PRINT
   490 :
   500 REM ---- Test 3: alle LEDs sehr dunkel ---------------------------
-  510 PRINT "Test 3 - alle ";nl%;" LEDs schwach weiss"
+  510 PRINT "Test 3 - alle ";nl%*2;" LEDs schwach weiss"
   520 PRINT "Bei falschem Timing sind die Farben bunt statt weiss."
   530 PROCclear
   540 FOR i%=0 TO nl%-1
-  550   PROCset(i%,8,8,8,0)
+  550   PROCset(i%,24,24,24,0)
   560 NEXT
   570 PROCsend
   580 PRINT "Taste zum Ausschalten";

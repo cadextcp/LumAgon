@@ -9,9 +9,25 @@
 ;     *LOAD ws2812.bin &B0000
 ;     CALL &B0004                 : REM einmalig, PC4 auf Ausgang
 ;     !(&B0008) = fb%             : REM Framebuffer (GRBW)
-;     !(&B000C) = buf%            : REM Bitpuffer, 8 Byte je fb-Byte
+;     !(&B000C) = buf%            : REM Bitpuffer, 8 * p_rep Byte je fb-Byte
 ;     !(&B0010) = 576             : REM Anzahl Framebuffer-Bytes
+;     ?(&B0014) = 2               : REM LEDs je Eintrag (Vorgabe 2)
+;     ?(&B0015) = 255             : REM Helligkeit 0-255 (Vorgabe 255)
 ;     CALL &B0000                 : REM Frame ausgeben
+;
+;  LEDs je Eintrag: Die Lumanode-Wand hat 2 LEDs je Pixel, 288 LEDs an
+;  der Kette. Die beiden LEDs eines Pixels folgen in der Kette immer
+;  direkt aufeinander (LED 2k und 2k+1, geprueft an der ledPairs-Tabelle
+;  der Arduino-Firmware). Der Framebuffer haelt deshalb nur 144 Eintraege,
+;  und die Routine sendet jeden p_rep-mal. Der Bitpuffer braucht
+;  8 * p_rep Byte je Framebuffer-Byte, bei 144 Eintraegen also 9216 Byte.
+;
+;  Helligkeit: Beim Entpacken laeuft jedes Byte durch eine Tabelle, die
+;  hoechstens MAXB liefert. Das ist die Strombremse. Sie sitzt hier,
+;  weil jeder Frame diesen Weg nimmt, egal welches BASIC-Programm ihn
+;  erzeugt. MAXB = 90 gilt fuer alle vier Kanaele: 4 x 90 = 360 ist
+;  dasselbe Budget wie die Arduino-Firmware mit 3 x 120 (RGB, W immer 0).
+;  Siehe docs/PLAN.md, Abschnitt 5.
 ;
 ;  Zur Ladeadresse: &B0000 ist laut MOS-Dokumentation der Bereich fuer
 ;  von SD geladene Star-Command-Programme (Moslets). BASIC laesst sein
@@ -55,10 +71,17 @@
 ;  Sollte sich auf echter Hardware zeigen, dass I/O-Wartezyklen das
 ;  Timing verschieben, wird ausschliesslich die Anzahl der NOPs
 ;  angepasst - die Struktur bleibt.
+;
+;  Achtung: out (bc),a schreibt den ganzen Port C. Die anderen PC-Pins
+;  duerfen deshalb keine Ausgaenge sein, die einen Pegel halten sollen.
 ; ===================================================================
 
     .assume adl=1
     .org $B0000
+
+MAXB:       .equ 90             ; Obergrenze je Kanal nach der Tabelle
+LUT:        .equ $B0800         ; 256 Byte Helligkeitstabelle, liegt
+                                ; hinter dem Code im Moslet-Bereich
 
 ; ---- Einsprungtabelle und Parameterblock -------------------------
 entry:      jp   send           ; $B0000  Frame ausgeben
@@ -66,6 +89,9 @@ initentry:  jp   gpioinit       ; $B0004  PC4 auf Ausgang schalten
 p_src:      .db  0,0,0,0        ; $B0008  Framebuffer-Adresse
 p_dst:      .db  0,0,0,0        ; $B000C  Bitpuffer-Adresse
 p_len:      .db  0,0,0,0        ; $B0010  Anzahl Framebuffer-Bytes
+p_rep:      .db  2              ; $B0014  LEDs je Eintrag
+p_bri:      .db  255            ; $B0015  Helligkeit 0-255
+            .db  0,0            ; $B0016  frei
 
 ; ---- PC4 als digitalen Ausgang konfigurieren ---------------------
 ; Mode 1 (Ausgang) verlangt DDR=0, ALT1=0 und ALT2=0 fuer das Bit.
@@ -89,23 +115,73 @@ gpioinit:
     out  (c), a
     ret
 
+; ---- Helligkeitstabelle aufbauen ---------------------------------
+; LUT[v] = v * k / 256 mit k = p_bri * MAXB / 256. Bei p_bri = 255
+; ist k = 89 und LUT[255] = 88 - also nie ueber MAXB.
+; Wird vor jedem Frame neu gebaut (256 Runden, rund 0,2 ms), damit
+; eine geaenderte Helligkeit ohne eigenen Aufruf wirkt.
+buildlut:
+    ld   a, (p_bri)
+    ld   b, a
+    ld   c, MAXB
+    mlt  bc                     ; BC = p_bri * MAXB
+    ld   e, b                   ; k = oberes Byte
+    ld   hl, LUT
+    ld   d, 0                   ; v = 0..255
+bl1:
+    ld   b, d
+    ld   c, e
+    mlt  bc                     ; BC = v * k
+    ld   (hl), b
+    inc  hl
+    inc  d
+    jr   nz, bl1
+    ret
+
 ; ---- Frame ausgeben ----------------------------------------------
 send:
     push ix
     push iy
+    call buildlut
 
 ; Schritt 1: Framebuffer in den Bitpuffer entpacken.
 ; Je Datenbit ein Byte, das bereits das fertige Portmuster enthaelt
 ; ($10 oder $00). Das haelt die zeitkritische Schleife frei von
-; Schiebe- und Maskierarbeit. Kostet 8x Speicher, hier unkritisch.
+; Schiebe- und Maskierarbeit. Jeder Eintrag (4 Byte GRBW) wird p_rep-
+; mal hintereinander entpackt, jedes Byte vorher durch die Tabelle.
     ld   hl, (p_src)
     ld   de, (p_dst)
     ld   bc, (p_len)
+    srl  b                      ; BC / 4 = Anzahl Eintraege
+    rr   c
+    srl  b
+    rr   c
+    ld   a, b
+    or   c
+    jr   z, sendend             ; nichts zu tun
+expled:
+    push bc                     ; Eintrags-Zaehler retten
+    ld   a, (p_rep)
+    or   a
+    jr   nz, reptok
+    inc  a                      ; p_rep = 0 wie 1 behandeln
+reptok:
+    ld   b, a
+exprep:
+    push bc                     ; Wiederholungs-Zaehler
+    push hl                     ; Anfang des Eintrags
+    ld   b, 4                   ; G, R, B, W
 expbyte:
+    push bc
     ld   a, (hl)
     inc  hl
-    push bc                     ; Byte-Zaehler retten
-    ld   c, a                   ; Datenbyte nach C
+    push hl
+    ld   hl, LUT                ; C = LUT[A]
+    ld   bc, 0
+    ld   c, a
+    add  hl, bc
+    ld   c, (hl)
+    pop  hl
     ld   b, 8
 expbit:
     rl   c                      ; MSB zuerst -> Carry
@@ -115,18 +191,28 @@ expbit:
     inc  de
     djnz expbit
     pop  bc
+    djnz expbyte
+    pop  hl                     ; zurueck an den Anfang des Eintrags
+    pop  bc
+    djnz exprep
+    ld   bc, 4                  ; weiter zum naechsten Eintrag
+    add  hl, bc
+    pop  bc
     dec  bc
     ld   a, b
     or   c
-    jr   nz, expbyte
+    jr   nz, expled
 
 ; Schritt 2: Bitpuffer zeitgenau ausgeben.
+; Anzahl Bits = Ende des Bitpuffers - Anfang, damit sie immer zu dem
+; passt, was Schritt 1 tatsaechlich geschrieben hat.
 ; Ab hier sind Interrupts gesperrt. Ein Interrupt vom VDP oder der
 ; Tastatur wuerde den Bitstrom zerreissen und die Kette verfaerben.
-    ld   hl, (p_len)
-    add  hl, hl                 ; Anzahl Bits = Bytes * 8
-    add  hl, hl
-    add  hl, hl
+; Bei 288 LEDs sind das 9216 Bits, also rund 11,5 ms.
+    ex   de, hl                 ; HL = Ende des Bitpuffers
+    ld   de, (p_dst)
+    or   a
+    sbc  hl, de
     ex   de, hl                 ; DE = Bitzaehler
     ld   hl, (p_dst)
     ld   bc, $009E              ; PC_DR, ab hier unveraendert
@@ -148,16 +234,19 @@ sendbit:
     jr   nz, sendbit            ; 3   Summe: 23 Takte
 
 ; Schritt 3: Latch. Die Kette uebernimmt die Daten erst nach einer
-; Low-Phase von mehr als 80 us. 300 Durchlaeufe a 6 Takte sind
-; rund 98 us; der Pin ist nach dem letzten Bit bereits low.
-    ld   de, 300
+; Low-Phase: SK6812 > 80 us, neuere WS2812B > 280 us. 1000 Durchlaeufe
+; a 6 Takte sind rund 325 us. Der Pin ist nach dem letzten Bit bereits
+; low, Interrupts koennen die Pause nur verlaengern - deshalb duerfen
+; sie hier schon wieder an.
+    ei
+    ld   de, 1000
 latch:
     dec  de
     ld   a, d
     or   e
     jr   nz, latch
 
-    ei
+sendend:
     pop  iy
     pop  ix
     ld   hl, 0

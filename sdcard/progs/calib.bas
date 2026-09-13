@@ -14,6 +14,10 @@
   140 REM  zusaetzlich die vollstaendige Kalibrierung LED fuer LED.
   150 REM
   160 REM  Voraussetzung: ws2812.bin im selben Verzeichnis.
+  162 REM
+  164 REM  Lumanode-Wand: Ihre Verdrahtung ist keine der 16 Varianten.
+  166 REM  Die Tabelle liegt als matrix.map bei und wird beim Start
+  168 REM  geladen; Menuepunkt 3 prueft sie an der Wand.
   170 REM ================================================================
   180 :
   190 PROCinit
@@ -360,11 +364,12 @@
  3590 DIM sk%(np%-1)
  3595 DIM rf%(wd%-1,ht%-1)
  3600 DIM fb% np%*4-1
- 3610 DIM bf% np%*32-1
+ 3610 DIM bf% np%*64-1 : REM 2 LEDs je Pixel
  3620 st$="noch nicht kalibriert"
  3630 REM Startbelegung: Serpentine zeilenweise ab oben links.
  3640 PROCbuild(1)
  3650 st$="Vorgabe, noch nicht kalibriert"
+ 3655 PROCloadq
  3680 gp%=0
  3690 OSCLI("LOAD ws2812.bin &B0000")
  3700 IF ?&B0000=&C3 THEN CALL &B0004 : gp%=TRUE
@@ -429,3 +434,20 @@
  4290   IF cd%(k%) AND ok% THEN n%=n%+1
  4300 NEXT
  4310 =n%
+ 4320 :
+ 4330 REM Laedt matrix.map ohne Rueckfrage, falls vorhanden und passend.
+ 4340 REM Fuer die Lumanode-Wand liegt die Datei im Repo bei.
+ 4350 DEF PROCloadq
+ 4360 LOCAL f%,x%,y%,w%,h%
+ 4370 f%=OPENIN("matrix.map")
+ 4380 IF f%=0 THEN ENDPROC
+ 4390 w%=BGET#f% : h%=BGET#f%
+ 4400 IF w%<>wd% OR h%<>ht% THEN CLOSE#f% : ENDPROC
+ 4410 FOR y%=0 TO ht%-1
+ 4420   FOR x%=0 TO wd%-1
+ 4430     mp%(x%,y%)=BGET#f%
+ 4440   NEXT
+ 4450 NEXT
+ 4460 CLOSE#f%
+ 4470 st$="aus matrix.map geladen"
+ 4480 ENDPROC

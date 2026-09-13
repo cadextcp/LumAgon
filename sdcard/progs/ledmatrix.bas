@@ -136,7 +136,7 @@
  1310 PRINT "  0  Serpentine zeilenweise (Standard)"
  1320 PRINT "  1  Progressiv zeilenweise"
  1330 PRINT "  2  Serpentine spaltenweise"
- 1332 PRINT "  3  aus matrix.map (von calib.bas erzeugt)"
+ 1332 PRINT "  3  aus matrix.map (Lumanode-Tabelle / calib.bas)"
  1340 PRINT
  1350 PRINT "Auswahl? ";
  1360 s%=GET-48
@@ -170,7 +170,8 @@
  1595 DIM sk%(np%-1)
  1596 DIM pv%(np%-1)
  1597 DIM cr%(255) : DIM cg%(255) : DIM cb%(255)
- 1598 DIM bf% np%*32-1
+ 1598 DIM bf% np%*64-1
+ 1599 REM Bitpuffer: 8 Byte je Framebuffer-Byte, fuer beide LEDs eines Pixels
  1600 DIM sn%(63)
  1610 FOR i%=0 TO 63
  1620   sn%(i%)=128+127*SIN(i%*2*PI/64)
@@ -214,7 +215,7 @@
  1910 DEF FNstylename(s%)
  1920 IF s%=0 THEN ="Serpentine zeilenweise"
  1930 IF s%=1 THEN ="Progressiv zeilenweise"
- 1935 IF s%=3 THEN ="aus matrix.map (kalibriert)"
+ 1935 IF s%=3 THEN ="aus matrix.map"
  1940 ="Serpentine spaltenweise"
  1950 :
  1960 REM ---- Framebuffer ----------------------------------------------
@@ -315,14 +316,15 @@
  2730 REM  Selbsttest - reine Textausgabe, laeuft auch im CLI-Emulator
  2740 REM ================================================================
  2750 DEF PROCselftest
- 2760 LOCAL s%,x%,y%,i%,e%,o%
+ 2760 LOCAL s%,x%,y%,i%,e%,o%,ss%,se%
  2770 REM Kein MODE-Wechsel: so auch im CLI-Emulator aufrufbar mit
  2775 REM   LOAD "ledmatrix.bas" : PROCinit : PROCselftest
  2780 PRINT "Selbsttest"
  2790 PRINT "=========="
  2800 PRINT
  2810 PRINT "Mapping - jeder LED-Index genau einmal:"
- 2820 FOR s%=0 TO 2
+ 2815 ss%=style% : se%=2 : IF mapok% THEN se%=3
+ 2820 FOR s%=0 TO se%
  2830   PROCmapbuild(s%)
  2840   e%=0
  2850   FOR i%=0 TO np%-1
@@ -341,7 +343,7 @@
  2980   PRINT "  Stil ";s%;" ";FNstylename(s%);
  2990   IF e%=0 THEN PRINT " : OK" ELSE PRINT " : FEHLER ";e%
  3000 NEXT
- 3010 PROCmapbuild(style%)
+ 3010 style%=ss% : PROCmapbuild(style%)
  3020 PRINT
  3030 PRINT "Tabelle fuer ";FNstylename(style%);":"
  3040 FOR y%=0 TO ht%-1
@@ -390,6 +392,8 @@
  3470 REM ================================================================
  3480 REM Die zeitkritische Bitausgabe steckt in ws2812.bin, erzeugt aus
  3490 REM ws2812.asm. BASIC liefert nur den Framebuffer und die Adressen.
+ 3495 REM Jeder Eintrag geht als 2 LEDs hinaus (Lumanode: 2 LEDs je Pixel),
+ 3497 REM bri% wirkt auch hier; ws2812.asm begrenzt zusaetzlich auf max. 90.
  3500 REM Ladeadresse &B0000 ist der MOS-Bereich fuer Star-Command-
  3510 REM Programme; ein dort gestartetes Moslet wuerde den Code
  3520 REM ueberschreiben, deshalb die Pruefung in PROCsendgpio.
@@ -405,6 +409,7 @@
  3620 !&B0008=fb%
  3630 !&B000C=bf%
  3640 !&B0010=np%*4
+ 3645 ?&B0015=bri%
  3650 CALL &B0000
  3660 ENDPROC
  3670 :
@@ -440,6 +445,7 @@
  3970 REM matrix.map wird von calib.bas geschrieben: Byte 0 Breite,
  3980 REM Byte 1 Hoehe, danach je Position ein Byte mit dem LED-Index.
  3990 REM Fehlt die Datei, bleibt das eingestellte Standard-Mapping.
+ 3995 REM Fuer die Lumanode-Wand liegt sie bei (scripts/gen_lumanode_map.py).
  4000 DEF PROCloadmap
  4010 LOCAL f%,x%,y%,w%,h%
  4020 mapok%=FALSE

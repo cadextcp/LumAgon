@@ -3,3 +3,5 @@
 *.bas text eol=crlf
 *.bat text eol=crlf
 /sdcard/autoexec.txt text eol=crlf
+# Binaere Tabellen (matrix.map) nie umwandeln
+*.map binary
