@@ -5,8 +5,9 @@ Arbeitsumgebung für BBC BASIC auf dem Agon Light, komplett lokal und offline la
 ## Schnellstart
 
 1. `run.bat` starten (Doppelklick) → Emulator-Fenster
-2. `autoexec.txt` wechselt nach `/progs` und startet BBC BASIC, du landest
-   direkt im `>`-Prompt
+2. `autoexec.txt` schaltet den Konsolenmodus des VDP ein, wechselt nach `/progs` und
+   startet darin `start.bas` (Menü mit Tönen, siehe „Betrieb ohne Bildschirm") —
+   mit `0` landest du im `>`-Prompt
 3. Programm laden und starten:
    ```
    LOAD "ledmatrix.bas"
@@ -17,10 +18,10 @@ Zurück ans MOS-Kommandozeile (etwa zum Assemblieren mit `ez80asm`) geht es mit 
 von dort mit `/bin/bbcbasic24` wieder in BASIC.
 
 > **Firmware:** `run.bat` startet den Emulator mit `--firmware console8` (MOS 2.3.3),
-> derselben Firmware wie der CLI-Emulator. Unter Agon Platform MOS 3.x heisst der Befehl
-> zum Start von BASIC `bbcbasic24` **ohne** Pfad — dann ist auch Zeile 2 der
-> `autoexec.txt` entsprechend zu ändern. Details in [docs/PLAN.md](docs/PLAN.md),
-> Abschnitt 13.
+> derselben Firmware wie der CLI-Emulator. Die `autoexec.txt` lädt BASIC mit `LOAD` und
+> `RUN .` und läuft damit unverändert unter Quark MOS 1.04, MOS 2.3.3 und MOS 3.x.
+> Auf dem echten Agon läuft Agon Platform MOS 3 („Arthur"). Details in
+> [docs/PLAN.md](docs/PLAN.md), Abschnitt 13.
 
 ## Ordnerstruktur
 
@@ -31,12 +32,12 @@ von dort mit `/bin/bbcbasic24` wieder in BASIC.
 | `sdcard/` | Die emulierte SD-Karte. Alles hier ist im Emulator sichtbar. |
 | `sdcard/progs/` | **Hier kommen eigene Programme hin.** Direkt mit jedem Editor bearbeitbar. |
 | `docs/PLAN.md` | Projektplan LED-Wand: Stand, Architektur, Messwerte, offene Punkte |
-| `scripts/` | Hilfsskripte (Python), z. B. `gen_lumanode_map.py` für `matrix.map` |
+| `scripts/` | Hilfsskripte (Python): `gen_lumanode_map.py` für `matrix.map`, `agonmon.py` als Terminal über USB |
 | `sdcard/bin/` | BBC BASIC + Utilities (Assembler, vi, unzip …) |
 | `sdcard/demos/` | Beispielprogramme in BASIC (Cube, Mandelbrot, Sprites, Sound …) |
 | `sdcard/games/` | Fertige Spiele zum Ausprobieren |
 | `sdcard/docs/` | Komplette Agon-Dokumentation (siehe unten) |
-| `sdcard/autoexec.txt` | Wird beim Boot ausgeführt: wechselt nach `/progs` und startet BBC BASIC |
+| `sdcard/autoexec.txt` | Wird beim Boot ausgeführt: deutsche Tastatur, Konsolenmodus, startet `start.bas` |
 | `tools/` | Fab Agon Emulator v1.2.4 (Windows x64) + heruntergeladenes ZIP |
 
 ## Projekt: LED-Wand
@@ -46,6 +47,7 @@ Pixel, 288 LEDs**, angesteuert über GPIO. Die Programme liegen in `sdcard/progs
 
 | Datei | Zweck |
 |---|---|
+| `start.bas` | Startprogramm für den Betrieb ohne Bildschirm: Menü per Taste, Rückmeldung mit Tönen |
 | `ledmatrix.bas` | Hauptprogramm mit Vorschau, Demos und LED-Ausgabe |
 | `calib.bas` | ermittelt bzw. prüft die Verdrahtung der Matrix |
 | `ledtest.bas` | Minimalprogramm für die erste Inbetriebnahme |
@@ -55,6 +57,35 @@ Pixel, 288 LEDs**, angesteuert über GPIO. Die Programme liegen in `sdcard/progs
 
 Stand, Architektur und offene Punkte stehen in [docs/PLAN.md](docs/PLAN.md) — Abschnitt 0
 gibt die Kurzfassung.
+
+## Betrieb ohne Bildschirm
+
+Der echte Agon läuft ohne Monitor, nur mit Tastatur und Kopfhörer. Beim Einschalten
+startet `start.bas` von selbst und meldet sich mit Tönen:
+
+| Ton | Bedeutung |
+|---|---|
+| aufsteigend C-E-G | bereit, wartet auf eine Taste |
+| hoher Doppelpiep | Taste erkannt, es geht los |
+| n kurze Pieps | Schritt n des LED-Tests beginnt |
+| Klick | nächster Pixel bzw. Taste erkannt (Dauertest) |
+| absteigend G-E-C | fertig, abgebrochen oder Ende |
+| drei tiefe Töne | Fehler |
+
+Tasten im Menü: `2` Dauertest, `3` LEDs aus, `0` Ende (BASIC-Prompt), jede andere Taste
+startet den LED-Test. ESC führt jederzeit zurück ins Menü.
+
+**Über USB mitlesen und tippen:** Hängt der Agon per USB-C am PC, erscheint er als
+COM-Port (USB-Seriell-Wandler CH340). `autoexec.txt` schaltet den Konsolenmodus des VDP ein
+(`VDU 23 0 254 1`): Alle Ausgaben gehen zusätzlich über USB hinaus, und dort getippte
+Tasten kommen beim Agon an wie von der eigenen Tastatur.
+
+```bash
+python scripts/agonmon.py
+```
+
+Strg+] beendet, braucht `pyserial`. Auf diesem Weg lassen sich auch Programmzeilen
+eintippen und mit `SAVE` auf die SD-Karte im Agon schreiben, ohne sie umzustecken.
 
 ## Workflow
 

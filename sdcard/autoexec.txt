@@ -1,2 +1,5 @@
+SET KEYBOARD 2
+VDU 23 0 254 1
 cd /progs
-/bin/bbcbasic24
+LOAD /bin/bbcbasic24.bin
+RUN . /progs/start.bas
