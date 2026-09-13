@@ -15,7 +15,7 @@ Arbeitsumgebung für BBC BASIC auf dem Agon Light, komplett lokal und offline la
    ```
 
 Zurück ans MOS-Kommandozeile (etwa zum Assemblieren mit `ez80asm`) geht es mit `*BYE`,
-von dort mit `/bin/bbcbasic24` wieder in BASIC.
+von dort mit `/bin/bbcbasic24` wieder in BASIC (auf dem Gerät mit MOS 3: `bbcbasic24` ohne Pfad).
 
 > **Firmware:** `run.bat` startet den Emulator mit `--firmware console8` (MOS 2.3.3),
 > derselben Firmware wie der CLI-Emulator. Die `autoexec.txt` lädt BASIC mit `LOAD` und
@@ -32,7 +32,8 @@ von dort mit `/bin/bbcbasic24` wieder in BASIC.
 | `sdcard/` | Die emulierte SD-Karte. Alles hier ist im Emulator sichtbar. |
 | `sdcard/progs/` | **Hier kommen eigene Programme hin.** Direkt mit jedem Editor bearbeitbar. |
 | `docs/PLAN.md` | Projektplan LED-Wand: Stand, Architektur, Messwerte, offene Punkte |
-| `scripts/` | Hilfsskripte (Python): `gen_lumanode_map.py` für `matrix.map`, `agonmon.py` als Terminal über USB |
+| `AGENTS.md` | Übergabe für Agenten: Stand, Hardware beim Nutzer, Regeln, Werkzeuge (`CLAUDE.md` verweist darauf) |
+| `scripts/` | Hilfsskripte (Python): `emutest.py` und `agonctl.py` steuern Emulator bzw. Agon für Tests, `agonmon.py` ist das Terminal über USB, `deploy_sd.py` spielt den Stand auf die SD-Karte, `gen_lumanode_map.py` erzeugt `matrix.map` |
 | `sdcard/bin/` | BBC BASIC + Utilities (Assembler, vi, unzip …) |
 | `sdcard/demos/` | Beispielprogramme in BASIC (Cube, Mandelbrot, Sprites, Sound …) |
 | `sdcard/games/` | Fertige Spiele zum Ausprobieren |
@@ -119,7 +120,7 @@ Beide sind BBC BASIC (Z80) Version 3.00 von R.T. Russell, portiert von Dean Belf
 ```
 .                    Verzeichnis anzeigen (auch: DIR, *CAT)
 cd /progs            Verzeichnis wechseln
-/bin/bbcbasic24      BASIC starten
+/bin/bbcbasic24      BASIC starten (MOS 3: bbcbasic24)
 /bin/vi name.bas     Editor auf dem Agon selbst
 ```
 

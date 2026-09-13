@@ -15,3 +15,6 @@ desktop.ini
 
 # Vom Assembler erzeugt, wird auf dem Agon gebaut
 /sdcard/progs/*.bin
+
+# Python
+__pycache__/
