@@ -183,6 +183,9 @@ Agon Pin 21 (PC4) ----+---------------->  2 1A
   andere hängt über 10 kΩ an VCC. So bleibt die Home-Assistant-Firmware per Schalter
   erreichbar.
 
+Eine Schritt-für-Schritt-Anleitung für diesen Aufbau auf dem Breadboard (konkrete
+Spalten, Checkliste, erster Test) steht in [AUFBAU-PEGELWANDLER.md](AUFBAU-PEGELWANDLER.md).
+
 ### Strombudget
 
 Die Arduino-Firmware begrenzt die Helligkeit auf 120/255 und nutzt den Weißkanal nie —
