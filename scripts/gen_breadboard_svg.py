@@ -109,6 +109,7 @@ def resistor_v(x, cy, bands, label):
 
 
 BROWN, BLACK, ORANGE = "#6b3f1d", "#111111", "#ef6c00"
+GREY, WHITE, REDB = "#9e9e9e", "#ffffff", "#c62828"
 
 # ---------------------------------------------------------------- Grundgeruest
 
@@ -210,13 +211,13 @@ add('<circle cx="400" cy="187" r="9" fill="#d9a441" stroke="#8a6d1f" stroke-widt
 text(400, 189.5, "104", size=6.5, fill="#5d4a12", anchor="middle", weight="bold")
 text(386, 191, "100 nF", size=8.5, fill="#555", anchor="end", halo=True)
 
-# 10 kOhm: Spalte 21 unten -> untere blaue Schiene
+# 8,2 kOhm: Spalte 21 unten -> untere blaue Schiene
 add(f'<line x1="{colx(21)}" y1="452" x2="{colx(21)}" y2="{BLUE_B}" stroke="{LEG}" stroke-width="2"/>')
-resistor_v(colx(21), 476, [BROWN, BLACK, ORANGE], "10 kΩ")
+resistor_v(colx(21), 476, [GREY, REDB, REDB], "8,2 kΩ")
 
-# 330 Ohm: Spalte 22 unten -> Spalte 17 unten (Zeile 430)
+# 390 Ohm: Spalte 22 unten -> Spalte 17 unten (Zeile 430)
 add(f'<line x1="{colx(17)}" y1="430" x2="{colx(22)}" y2="430" stroke="{LEG}" stroke-width="2"/>')
-resistor_h(380, 430, [ORANGE, ORANGE, BROWN], "330 Ω")
+resistor_h(380, 430, [ORANGE, WHITE, BROWN], "390 Ω")
 
 # ---------------------------------------------------------------- Punkte (verbunden)
 
@@ -230,8 +231,8 @@ for x, y in [(230, BLUE_T), (400, BLUE_T), (colx(22), BLUE_T), (colx(25), BLUE_T
              (colx(22), 228), (colx(25), 228), (colx(20), 452), (colx(24), 452),
              (colx(26), 452)]:
     plug(x, y, BLK)
-plug(colx(21), 452, LEG)            # 10 kOhm
-plug(colx(17), 430, LEG)            # 330 Ohm
+plug(colx(21), 452, LEG)            # 8,2 kOhm
+plug(colx(17), 430, LEG)            # 390 Ohm
 plug(colx(22), 430, LEG)
 plug(colx(21), 408, ORG)            # Daten vom Agon
 plug(colx(17), 452, YEL)            # Daten zum Modul
@@ -246,8 +247,8 @@ badge(382, 160, "4")                # 100 nF
 badge(620, 214, "5")                # unbenutzte Kanaele oben
 badge(580, 478, "5")                # unbenutzte Kanaele unten
 badge(460, 478, "6")                # Pin 1
-badge(536, 494, "7")                # 10 kOhm
-badge(380, 412, "8")                # 330 Ohm
+badge(536, 494, "7")                # 8,2 kOhm
+badge(380, 412, "8")                # 390 Ohm
 badge(172, 266, "10")               # Agon
 
 # ---------------------------------------------------------------- Agon
@@ -328,8 +329,8 @@ for n in notes:
 text(950, 372, "IC-Pins (Spalten 20–26):", size=9, weight="bold", fill="#111")
 pin_table = ["14 VCC → +5 V oben · 7 GND → GND unten",
              "1 OE̅1 → GND unten (Kanal 1 immer an)",
-             "2 1A ← Agon Pin 21 · 10 kΩ → GND unten",
-             "3 1Y → 330 Ω → Spalte 17 → Modul",
+             "2 1A ← Agon Pin 21 · 8,2 kΩ → GND unten",
+             "3 1Y → 390 Ω → Spalte 17 → Modul",
              "13, 10 → +5 V oben · 4 → +5 V unten",
              "12, 9 → GND oben · 5 → GND unten",
              "6, 8, 11 bleiben frei"]

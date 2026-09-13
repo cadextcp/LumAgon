@@ -316,18 +316,18 @@
 <text x="386" y="191" font-family="Arial, sans-serif" font-size="8.5" fill="#555" text-anchor="end" font-weight="normal" stroke="#f5f0dc" stroke-width="3" paint-order="stroke">100 nF</text>
 <line x1="480" y1="452" x2="480" y2="500" stroke="#8d8d8d" stroke-width="2"/>
 <rect x="474" y="460" width="12" height="32" rx="5" fill="#e8d5a3" stroke="#8a7a4a" stroke-width="1"/>
-<rect x="474" y="465" width="12" height="3" fill="#6b3f1d"/>
-<rect x="474" y="471" width="12" height="3" fill="#111111"/>
-<rect x="474" y="477" width="12" height="3" fill="#ef6c00"/>
+<rect x="474" y="465" width="12" height="3" fill="#9e9e9e"/>
+<rect x="474" y="471" width="12" height="3" fill="#c62828"/>
+<rect x="474" y="477" width="12" height="3" fill="#c62828"/>
 <rect x="474" y="485" width="12" height="3" fill="#c8a23a"/>
-<text x="491" y="479" font-family="Arial, sans-serif" font-size="8.5" fill="#555" text-anchor="start" font-weight="normal" stroke="#f5f0dc" stroke-width="3" paint-order="stroke">10 kΩ</text>
+<text x="491" y="479" font-family="Arial, sans-serif" font-size="8.5" fill="#555" text-anchor="start" font-weight="normal" stroke="#f5f0dc" stroke-width="3" paint-order="stroke">8,2 kΩ</text>
 <line x1="320" y1="430" x2="520" y2="430" stroke="#8d8d8d" stroke-width="2"/>
 <rect x="358" y="424" width="44" height="12" rx="5" fill="#e8d5a3" stroke="#8a7a4a" stroke-width="1"/>
 <rect x="365" y="424" width="4" height="12" fill="#ef6c00"/>
-<rect x="374" y="424" width="4" height="12" fill="#ef6c00"/>
+<rect x="374" y="424" width="4" height="12" fill="#ffffff"/>
 <rect x="383" y="424" width="4" height="12" fill="#6b3f1d"/>
 <rect x="395" y="424" width="4" height="12" fill="#c8a23a"/>
-<text x="380" y="448" font-family="Arial, sans-serif" font-size="8.5" fill="#555" text-anchor="middle" font-weight="normal" stroke="#f5f0dc" stroke-width="3" paint-order="stroke">330 Ω</text>
+<text x="380" y="448" font-family="Arial, sans-serif" font-size="8.5" fill="#555" text-anchor="middle" font-weight="normal" stroke="#f5f0dc" stroke-width="3" paint-order="stroke">390 Ω</text>
 <circle cx="218" cy="172" r="4.5" fill="#d32f2f" stroke="#333" stroke-width="0.75"/>
 <circle cx="400" cy="172" r="4.5" fill="#d32f2f" stroke="#333" stroke-width="0.75"/>
 <circle cx="440" cy="172" r="4.5" fill="#d32f2f" stroke="#333" stroke-width="0.75"/>
@@ -460,8 +460,8 @@
 <text x="950" y="372" font-family="Arial, sans-serif" font-size="9" fill="#111" text-anchor="start" font-weight="bold">IC-Pins (Spalten 20–26):</text>
 <text x="950" y="386" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">14 VCC → +5 V oben · 7 GND → GND unten</text>
 <text x="950" y="397.5" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">1 OE̅1 → GND unten (Kanal 1 immer an)</text>
-<text x="950" y="409.0" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">2 1A ← Agon Pin 21 · 10 kΩ → GND unten</text>
-<text x="950" y="420.5" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">3 1Y → 330 Ω → Spalte 17 → Modul</text>
+<text x="950" y="409.0" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">2 1A ← Agon Pin 21 · 8,2 kΩ → GND unten</text>
+<text x="950" y="420.5" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">3 1Y → 390 Ω → Spalte 17 → Modul</text>
 <text x="950" y="432.0" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">13, 10 → +5 V oben · 4 → +5 V unten</text>
 <text x="950" y="443.5" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">12, 9 → GND oben · 5 → GND unten</text>
 <text x="950" y="455.0" font-family="Arial, sans-serif" font-size="8.5" fill="#333" text-anchor="start" font-weight="normal">6, 8, 11 bleiben frei</text>
