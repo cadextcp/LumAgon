@@ -1,7 +1,7 @@
 # LED-Wand am Agon Light 2 — Projektplan
 
-12×12-Matrix aus SK6812 RGBNW (12 V), angesteuert per GPIO vom Agon Light 2,
-programmiert in BBC BASIC.
+Lumanode-Wand mit 12×12 Pixeln aus SK6812 RGBNW (12 V), **2 LEDs je Pixel = 288 LEDs**,
+angesteuert per GPIO vom Agon Light 2, programmiert in BBC BASIC.
 
 ## 0. Stand
 
@@ -10,33 +10,40 @@ Alles liegt in `sdcard/progs/`:
 | Datei | Zweck | Stand |
 |---|---|---|
 | `ledmatrix.bas` | Hauptprogramm: Framebuffer, Mapping, Vorschau, Demos, GPIO-Ausgabe | läuft, Grafik ungeprüft |
-| `calib.bas` | Kalibrierung der Verdrahtung, schreibt `matrix.map` | Logik verifiziert |
+| `calib.bas` | Kalibrierung bzw. Prüfung der Verdrahtung, schreibt `matrix.map` | Logik verifiziert |
 | `ledtest.bas` | Minimalprogramm für die erste Inbetriebnahme, ohne Grafik | läuft |
-| `ws2812.asm` | zeitkritische Bitausgabe auf PC4, mit `ez80asm` zu übersetzen | Timing ungeprüft |
+| `ws2812.asm` | zeitkritische Bitausgabe auf PC4 mit Pixelverdopplung und Helligkeitsbremse | Entpacken verifiziert, Timing ungeprüft |
+| `wstest.bas` | Selbsttest für `ws2812.bin`: Entpacken, Verdopplung, Helligkeit | alles OK |
+| `matrix.map` | Verdrahtung der Lumanode-Wand, erzeugt von `scripts/gen_lumanode_map.py` | geprüft |
 | `cyctest.asm` | Messhilfe für Instruktionszyklen | zeigte: Emulator taugt dafür nicht |
 
 **Fertig und verifiziert:** Framebuffer und Mapping (M0), Kalibrierverfahren mit allen
-16 Verdrahtungen (M1), Übersetzung und Ablauf der Assemblerroutine (M2). Beide MOS-
+16 Verdrahtungen (M1), Übersetzung und Ablauf der Assemblerroutine (M2), Abgleich mit dem
+Lumanode-Projekt: 288 LEDs, echte Verdrahtung, Strombremse (Abschnitt 14). Beide MOS-
 Versionen geprüft (Abschnitt 13).
 
 **Offen — braucht Hardware:**
 
 1. **Das SK6812-Timing.** Rechnerisch geht es auf, gemessen ist es nicht. Der Emulator
    zählt keine echten Zyklen, kann es also nicht beantworten (Abschnitt 11).
-2. **Die Bildschirmvorschau** wurde nie angesehen — nur geprüft, dass sie fehlerfrei
+2. **VDP-Verkehr während der Interrupt-Sperre** (11,5 ms je Frame, Abschnitt 8).
+3. **Die Bildschirmvorschau** wurde nie angesehen — nur geprüft, dass sie fehlerfrei
    durchläuft und die Farbwerte stimmen.
-3. **M3 und M4** (Integration an der Wand, Effektbibliothek).
+4. **M3 und M4** (Integration an der Wand, Effektbibliothek).
 
-**Nächster Schritt:** Mit `ledtest.bas` den ersten Kontakt herstellen, sobald der
-Pegelwandler da ist. Zeigt dessen Test 3 statt schwachem Weiß bunte Farben, stimmt das
-Timing nicht — dann sind die NOPs in `ws2812.asm` anzupassen oder Plan B (SPI, Abschnitt 4)
-zu ziehen.
+**Nächster Schritt:** Pegelwandler nach Abschnitt 5 aufbauen, den Arduino von der
+Datenleitung trennen, dann mit `ledtest.bas` den ersten Kontakt herstellen. Zeigt dessen
+Test 3 statt schwachem Weiß bunte Farben, stimmt das Timing nicht — dann sind die NOPs in
+`ws2812.asm` anzupassen oder Plan B (SPI, Abschnitt 4) zu ziehen. Vorher das bekannte
+defekte Modul reparieren (Abschnitt 5), sonst ist ein Timingfehler nicht von dessen
+Aussetzern zu unterscheiden.
 
 ## 1. Ausgangslage
 
 | | |
 |---|---|
-| Matrix | 144 Pixel (12×12), SK6812 RGBNW, 12 V, Gehäuse nach [LumaNode](https://www.kickstarter.com/projects/printableaccessories/lumanode) |
+| Matrix | 144 Pixel (12×12) aus 36 Modulen à 2×2 Pixel, **2 LEDs je Pixel = 288 LEDs**, SK6812 RGBNW, 12 V, Gehäuse nach [LumaNode](https://www.kickstarter.com/projects/printableaccessories/lumanode) |
+| Bisher | Arduino UNO R4 WiFi mit eigener Firmware (Projekt `lumanode`, `build_lumanode_ha.py`), Daten an Pin 13. Daraus stammen Verdrahtung und Helligkeitsgrenze. |
 | Rechner | Agon Light 2 (Olimex), eZ80 @ 18,432 MHz, MOS 2.3.3 |
 | Sprache | BBC BASIC (ADL, `/bin/bbcbasic24`) + eZ80-Assembler für die Bitausgabe |
 | Stromversorgung | extern, nur Masse und Datenleitung gehen zum Agon |
@@ -52,6 +59,10 @@ zu ziehen.
 Zugriff über `OUT (C),A` mit der 16-Bit-I/O-Adresse in `BC` — das sind Standard-Z80-Befehle,
 der Inline-Assembler von BBC BASIC genügt also im Prinzip. Pin als Ausgang: Bit im `DDR` auf 0.
 
+Belegt durch MOS: PB1 (VBLANK-Interrupt, 50 Hz), PB2–PB7 (SPI, SD-Karte an PB4),
+PD0–PD3 (UART0 zum VDP, 1.152.000 Baud, RTS/CTS). Quelle: MOS-Quellcode
+(`equs.inc`, `interrupts.asm`, `spi.asm`, `uart.c`).
+
 ### Pinbelegung (34-Pin-Header, Agon Light 2)
 
 Frei nutzbar sind `PC0`–`PC7` (Pins 17–24) und `PD4`–`PD7` (Pins 13–16).
@@ -61,9 +72,12 @@ Frei nutzbar sind `PC0`–`PC7` (Pins 17–24) und `PD4`–`PD7` (Pins 13–16).
 |---|---|
 | **Daten zur Matrix** | **21 (`PC4`)** |
 | GND | 3, 5 oder 33 |
-| +5 V (für Pegelwandler) | 4 |
+| +5 V (für Pegelwandler) | 4 — laut Olimex bis 1,8 A frei, per LiPo-USV gepuffert |
 | +3,3 V | 34 |
 | SPI MOSI / SCK (Plan B) | 32 / 31 |
+
+**Alle GPIOs arbeiten mit 3,3 V und sind nicht 5-V-tolerant** — laut Olimex-Handbuch
+beschädigt ein 5-V-Signal das Board.
 
 ## 2. Timing — warum BASIC allein nicht reicht
 
@@ -75,30 +89,36 @@ SK6812 erwartet pro Bit 1,25 µs bei ±150 ns Toleranz. Ein eZ80-Takt dauert 54 
 | „0" High-Phase | 0,3 µs | 5,5 |
 | „1" High-Phase | 0,6 µs | 11 |
 | Toleranz | ±150 ns | ±2,8 |
-| Reset (Latch) | > 80 µs | — |
+| Reset (Latch) | > 80 µs (neuere WS2812B: > 280 µs) | — |
 
 Ein BASIC-Interpreter braucht dafür das Hundertfache. Die Bitausgabe muss in Assembler
 laufen, BASIC liefert nur den Framebuffer.
 
-Ein vollständiger Frame umfasst 144 × 32 = 4608 Bits, also **5,76 ms** — die ganze Zeit
-mit gesperrten Interrupts. Daraus folgen realistisch 20–30 fps.
+Ein vollständiger Frame umfasst 288 × 32 = 9216 Bits, also **11,5 ms** — die ganze Zeit
+mit gesperrten Interrupts. Die Ausgabe allein schafft damit über 80 fps; die Grenze setzt
+BASIC beim Rechnen der Bilder (Abschnitt 9).
 
 ## 3. Architektur
 
 ```
-BASIC   Animation, Effekte, Mapping, Helligkeitsbegrenzung
+BASIC   Animation, Effekte, Mapping
    |
-   |    Framebuffer: 144 × 4 Byte GRBW = 576 Byte, in LED-Reihenfolge
+   |    Framebuffer: 144 × 4 Byte GRBW = 576 Byte, ein Eintrag je Pixel,
+   |    in Kettenreihenfolge der Pixel
    v
 Renderer-Schicht  (austauschbar)
    |
    +-- VDP-Backend    Bildschirmvorschau, für Entwicklung ohne Hardware
    +-- GPIO-Backend   Assembler-Bitbang auf PC4      (Plan A)
+   |                  sendet jeden Eintrag 2x (2 LEDs je Pixel),
+   |                  jedes Byte durch die Helligkeitstabelle (max. 90)
    +-- SPI-Backend    Hardware-getaktet über MOSI    (Plan B)
 ```
 
-Der Framebuffer liegt bereits in der Reihenfolge, in der die Bytes auf den Draht gehen
-(GRBW pro LED, LED 0 zuerst). Die Ausgaberoutine schiebt ihn dadurch nur noch linear hinaus.
+Der Framebuffer liegt bereits in der Reihenfolge, in der die Pixel auf den Draht gehen
+(GRBW je Pixel, Pixel 0 zuerst). Die beiden LEDs eines Pixels folgen in der Kette immer
+direkt aufeinander, deshalb genügt ein Eintrag je Pixel — die Ausgaberoutine verdoppelt
+ihn beim Entpacken (Abschnitt 11).
 
 ## 4. Plan B — SPI statt Bit-Banging
 
@@ -106,17 +126,19 @@ Falls das Bit-Banging auf echter Hardware am Interrupt-Jitter scheitert: Der eZ8
 einen SPI-Controller, `MOSI` liegt auf Pin 32. Jedes LED-Bit wird als vier SPI-Bits kodiert,
 womit die SPI-Hardware das Timing selbst erzeugt — **immun gegen Interrupts**.
 
-Mit BRG = 3 ergibt sich 18,432 MHz / (2 × 3) = 3,072 MHz, also 325 ns je SPI-Bit:
+Mit BRG = 3 (derselbe Teiler, den MOS für die SD-Karte nutzt) ergibt sich
+18,432 MHz / (2 × 3) = 3,072 MHz, also 325 ns je SPI-Bit:
 
 | LED-Bit | SPI-Muster | High-Zeit | Soll |
 |---|---|---|---|
 | 0 | `1000` | 325 ns | 300 ± 150 ns ✓ |
 | 1 | `1100` | 651 ns | 600 ± 150 ns ✓ |
 
-Beides liegt mittig in der Toleranz. Kosten: 2304 Byte Sendepuffer statt 576, und der
-SPI-Bus wird mit der SD-Karte geteilt — während MOS auf die Karte zugreift, sehen die LEDs
-Datenmüll. Solange die Animation im RAM läuft, spielt das keine Rolle; nach einem
-Dateizugriff genügt ein erneutes Senden des Frames.
+Beides liegt mittig in der Toleranz. Der Sendepuffer braucht 288 × 4 × 4 = 4608 Byte.
+Der SPI-Bus wird mit der SD-Karte geteilt — ohne Gegenmaßnahme sehen die LEDs bei jedem
+Dateizugriff Datenmüll. Abhilfe: Den 74AHCT125 über seinen OE̅-Pin per GPIO nur während
+eines LED-Frames durchschalten, dazu 10 kΩ Pull-down an DIN. Ungeklärt ist, ob MOSI
+zwischen zwei Bytes low bleibt — das muss vor Plan B gemessen werden.
 
 Plan C, falls beides scheitert: UART1 (Pins 17/18) zu einem Mikrocontroller, der die LEDs
 treibt. Robust, aber kein reines GPIO mehr.
@@ -124,39 +146,71 @@ treibt. Robust, aber kein reines GPIO mehr.
 ## 5. Hardware-Aufbau
 
 ```
-Agon Pin 21 (PC4) --> [74AHCT125] --> 330 Ohm --> DIN Matrix
-Agon Pin  4 (+5V) --> VCC 74AHCT125
-Agon Pin  3 (GND) --> GND --+-- GND Netzteil
-                            +-- GND Matrix
-12-V-Netzteil ------------------> +12V Matrix
+Agon Pin 4  (+5V) ---------+------------ 14 VCC  74AHCT125
+                         100 nF
+Agon Pin 3  (GND) ---------+------------  7 GND --+-- GND Netzteil
+                                                  +-- GND Matrix
+                           GND ---------  1 1OE̅   (Kanal 1 immer an)
+Agon Pin 21 (PC4) ----+---------------->  2 1A
+                    10 kΩ                 3 1Y --> 330 Ohm --> DIN Matrix
+                      |
+                     GND                  4, 10, 13 (OE̅ 2-4) -> VCC
+                                          5, 9, 12  (A 2-4)   -> GND
+12-V-Netzteil ---------------------------------------------> +12V Matrix
 ```
 
 - Der Agon gibt 3,3 V aus, SK6812 erwarten am Dateneingang typisch 0,7 × VDD.
   Der **74AHCT125** hebt auf 5 V — ohne ihn ist der Betrieb ein Wackelkandidat.
+- **Nie** DIN, einen 5-V-Ausgang oder den Arduino direkt an einen Agon-Pin — die GPIOs
+  sind nicht 5-V-tolerant. Den 74AHCT125 vom Agon-5-V-Pin versorgen: Dann liegt nie ein
+  High an seinem Eingang, während er selbst stromlos ist.
+- **100 nF** direkt an VCC/GND des 74AHCT125.
+- **10 kΩ Pull-down** an 1A: Nach dem Reset ist PC4 ein Eingang und würde sonst offen
+  auf die LEDs rauschen. Beim ersten Einschalten messen: 1A muss unter 0,8 V liegen.
+- Unbenutzte Kanäle: OE̅ an VCC (Ausgang hochohmig), Eingänge an GND (nicht offen lassen).
 - **330 Ω** in der Datenleitung dämpft Reflexionen.
 - **1000 µF** über +12 V/GND direkt an der Matrix gegen Einschaltspitzen.
 - Die **gemeinsame Masse ist nicht optional** — ohne sie hat das Datensignal keinen Bezug.
+- **Arduino von DIN trennen** (Pin 13): Zwei Treiber auf einer Leitung sind nicht erlaubt.
+  *Option:* Kanal 2 des 74AHCT125 für den Arduino nutzen (2A ← Pin 13, 2Y über eigene 330 Ω
+  auf denselben DIN-Knoten). Ein Umschalter legt entweder 1OE̅ oder 2OE̅ auf GND, der
+  andere hängt über 10 kΩ an VCC. So bleibt die Home-Assistant-Firmware per Schalter
+  erreichbar.
 
-Bei 144 Pixeln auf Vollweiß summiert sich der Strom erheblich. Deshalb ist im Renderer von
-Anfang an ein globaler Helligkeitsfaktor vorgesehen.
+### Strombudget
+
+Die Arduino-Firmware begrenzt die Helligkeit auf 120/255 und nutzt den Weißkanal nie —
+das ist der im Betrieb erprobte Höchstwert. Hier darf auch W leuchten, deshalb begrenzt
+`ws2812.asm` **jeden der vier Kanäle auf 90**: 4 × 90 = 360 entspricht 3 × 120 aus der
+Firmware. Die Grenze sitzt in der Assemblerroutine, weil jeder Frame dort durchläuft,
+egal welches BASIC-Programm ihn erzeugt. Wer mehr will, misst erst den Strom (max. 3 A
+je Einspeisung) und ändert dann `MAXB`.
+
+### Bekannter Defekt
+
+Laut Fehlersuche im Lumanode-Projekt (`debugFreeze.md`) hat das alte Modul 6 — jetzt an
+Kettenposition 30 — einen marginalen Ausgang: Bei schnellen, hellen Mustern bricht die
+Kette dahinter ab. **Vor der Timing-Prüfung am Agon reparieren**, sonst sieht dessen
+Aussetzer aus wie ein Timingfehler.
 
 ## 6. Das LED-Mapping
 
-Kernstück: eine Tabelle `mp%(x,y) -> LED-Index` mit 144 Einträgen statt einer festen Formel.
+Kernstück: eine Tabelle `mp%(x,y) -> Index` mit 144 Einträgen statt einer festen Formel.
 Sie deckt jede Verdrahtung ab, auch eine fehlerhafte, und kostet zur Laufzeit nur einen
-Array-Zugriff.
+Array-Zugriff. Der Index zählt **Pixel in Kettenreihenfolge**; bei der Lumanode-Wand steht
+Index k für die LEDs 2k und 2k+1.
 
-Erzeugt wird sie aus vier Parametern: Startecke, Serpentine ja/nein, zeilen- oder
-spaltenweise, Rotation. Der bei Streifenaufbauten übliche Serpentinenfall:
+**Die Lumanode-Verdrahtung ist bekannt.** Die Arduino-Firmware enthält sie als
+`ledPairs[12][12][2]`, übernommen aus dem Pixel-Builder-Plan und am echten Aufbau
+korrigiert. Die Kette läuft modulweise in Doppelspalten, in den unteren zwei Modulreihen
+der mittleren vier Spalten im Zickzack — keine der 16 Formel-Varianten passt.
+`scripts/gen_lumanode_map.py` enthält die Tabelle, prüft sie (jede LED genau einmal, die
+zwei LEDs eines Pixels immer benachbart) und schreibt daraus `sdcard/progs/matrix.map`.
+Wird die Wand umgebaut, ist dort die Tabelle zu ersetzen und das Skript neu auszuführen.
 
-```basic
-IF (y AND 1) = 0 THEN i% = y*12 + x ELSE i% = y*12 + (11-x)
-```
-
-Die tatsächliche Topologie geht aus dem LumaNode-Bauplan nicht hervor — das Projekt liefert
-nur STL-Dateien und geht von Arduino/FastLED aus. Deshalb gehört ein **Kalibrierprogramm**
-dazu (M1): Es zündet LED 0, 1, 2 … einzeln, die Position wird eingegeben, das Ergebnis
-landet als `matrix.map` auf der SD-Karte und wird von allen Programmen geladen.
+Die Formel-Varianten und das Kalibrierprogramm (M1) bleiben für andere Aufbauten.
+An der Lumanode-Wand dient `calib.bas` zur **Prüfung**: Es lädt `matrix.map` beim Start,
+Menüpunkt 3 läuft die Kette ab und zeigt parallel, wo jeder Pixel leuchten muss.
 
 ## 7. Meilensteine
 
@@ -164,7 +218,8 @@ landet als `matrix.map` auf der SD-Karte und wird von allen Programmen geladen.
 |---|---|---|
 | **M0** ✓ | Framebuffer, Mapping-Tabelle, Renderer-Schicht, VDP-Bildschirmvorschau | nein |
 | **M1** ✓ | Kalibrierprogramm, `matrix.map` laden/speichern | Matrix |
-| **M2** ~ | Assembler-Ausgaberoutine geschrieben und eingebunden; Timing noch offen | alles |
+| **M2** ~ | Assembler-Ausgaberoutine mit Verdopplung und Helligkeitsbremse; Entpacken verifiziert, Timing offen | alles |
+| **L** ✓ | Abgleich mit dem Lumanode-Projekt (Abschnitt 14) | nein |
 | **M3** | Integration, erste Animation auf der Wand | alles |
 | **M4** | Effektbibliothek: Lauflicht, Plasma, Text-Scroller, Bilder von SD | alles |
 
@@ -173,8 +228,18 @@ M0 und M1 sind vollständig ohne angeschlossene Hardware entwickelbar.
 ## 8. Risiken
 
 **M2 ist der kritische Punkt.** Die Zyklenrechnung geht auf (Abschnitt 11), aber nur
-rechnerisch — ob die reale Hardware dieselben Zeiten liefert, ist offen. Der Emulator kann
-es nicht beantworten. Greift sonst Plan B.
+rechnerisch — ob die reale Hardware dieselben Zeiten liefert, ist offen. Wartezyklen beim
+Codeabruf aus dem externen RAM oder beim I/O-Zugriff würden alles verschieben. Der Emulator
+kann es nicht beantworten. Greift sonst Plan B.
+
+**VDP-Verkehr während der Interrupt-Sperre.** Ein Frame sperrt die Interrupts 11,5 ms.
+UART0 zum VDP läuft mit 1.152.000 Baud; sein 16-Byte-FIFO ist nach rund 140 µs voll.
+Schickt der VDP in dieser Zeit etwas (Tastendruck, Antwort auf eine VDU-Abfrage), kann es
+verloren gehen. Test an der Hardware: Dauerbetrieb mit vielen Frames und dabei auf der
+Tastatur tippen. Falls MOS danach hängt oder Tasten fehlen: vor jedem Frame RTS an UART0
+zurücknehmen und nach dem Frame wieder setzen — die Leitungen `ESP32_RTS`/`ESP32_CTS`
+sind laut Schaltplan vorhanden; ob der VDP sie beachtet, ist zu prüfen. Die VBLANK-Ticks
+(50 Hz) werden höchstens verzögert; `TIME` über zehn Minuten gegen eine Uhr prüfen.
 
 *Erledigt:* Die ursprüngliche Sorge, die Schleife müsse pro Byte ausgerollt werden, hat sich
 nicht bestätigt — im Gegenteil, das Ausrollen war mit 152 Byte zu weit für einen relativen
@@ -239,12 +304,32 @@ Umgesetzt in `sdcard/progs/ws2812.asm`, übersetzt mit dem Assembler von der SD-
 | `inc rr` / `dec rr` | 1 | | `xor r` / `or r` | 1 |
 | `jr cc,d` | 3 genommen / 2 sonst | | `jr d` | 3 |
 
+### Parameterblock
+
+| Adresse | Inhalt | Vorgabe |
+|---|---|---|
+| `&B0000` | `jp send` — Frame ausgeben | |
+| `&B0004` | `jp gpioinit` — PC4 auf Ausgang | |
+| `&B0008` | Adresse Framebuffer (4 Byte) | |
+| `&B000C` | Adresse Bitpuffer (4 Byte) | |
+| `&B0010` | Anzahl Framebuffer-Bytes (4 Byte) | |
+| `&B0014` | LEDs je Eintrag (1 Byte) | 2 |
+| `&B0015` | Helligkeit 0–255 (1 Byte) | 255 |
+
+Der Bitpuffer braucht 8 × LEDs-je-Eintrag Byte je Framebuffer-Byte, bei 144 Einträgen
+also **9216 Byte** (`DIM bf% np%*64-1`). `*LOAD` setzt die Vorgaben zurück.
+
 ### Aufbau
 
 Statt zur Laufzeit Bits zu schieben, entpackt die Routine den Framebuffer zuerst in
 einen Bitpuffer: ein Byte je Datenbit, das bereits das fertige Portmuster (`$10` oder
-`$00`) enthält. Das kostet den achtfachen Speicher — bei 512 KiB belanglos — und macht
-die zeitkritische Schleife so kurz, dass sie exakt aufgeht:
+`$00`) enthält. Dabei wird jeder Eintrag zweimal hintereinander entpackt (2 LEDs je Pixel)
+und jedes Byte durch eine Helligkeitstabelle geschickt:
+`LUT[v] = v × k / 256` mit `k = Helligkeit × 90 / 256`, also höchstens 88. Die Tabelle
+liegt bei `&B0800` und wird vor jedem Frame neu gebaut (256 Runden, rund 0,2 ms).
+
+Das kostet Speicher — bei 512 KiB belanglos — und macht die zeitkritische Schleife so
+kurz, dass sie exakt aufgeht:
 
 ```
 ld a,$10 | out (c),a | ld a,(hl) | inc hl | out (c),a | nop nop
@@ -264,7 +349,15 @@ Naht zwischen Bytes.
 
 Die erzeugten Opcodes wurden gegen die Rechnung geprüft:
 `3E 10 | ED 79 | 7E | 23 | ED 79 | 00 00 | AF | ED 79 | 1B | 7A | B3 | 20 EE` —
-18 Byte, Rücksprung exakt auf den Schleifenanfang.
+18 Byte, Rücksprung exakt auf den Schleifenanfang. Die Schleife selbst ist beim
+Lumanode-Abgleich unverändert geblieben.
+
+Die Anzahl der Bits ergibt sich aus dem Ende des Bitpuffers minus Anfang — sie passt damit
+immer zu dem, was das Entpacken tatsächlich geschrieben hat.
+
+Nach dem letzten Bit folgt die Latch-Pause: 1000 Runden à 6 Takte = **325 µs**, genug auch
+für neuere WS2812B (> 280 µs). Die Interrupts sind dabei schon wieder frei — der Pin ist
+low, ein Interrupt kann die Pause nur verlängern.
 
 ### Speicherlage
 
@@ -272,6 +365,7 @@ BBC BASIC lässt `HIMEM` (`&B0000`) **nicht absenken** — der Versuch endet mit
 Damit bleibt nur der Bereich ab `&B0000`, den MOS für von SD geladene Star-Command-
 Programme vorhält. Solange im Betrieb kein Moslet aus `/mos/` startet, bleibt der Code
 unangetastet; `PROCsendgpio` prüft vor jedem Frame auf `$C3` und lädt sonst nach.
+Der Code ist 240 Byte groß, die Helligkeitstabelle liegt dahinter bei `&B0800`.
 
 Nebenbei: `*LOAD` verlangt Hexadezimalzahlen **mit `&`-Präfix** (`*LOAD ws2812.bin &B0000`).
 Ohne Präfix wird dezimal interpretiert und stillschweigend nichts geladen.
@@ -280,7 +374,17 @@ Ohne Präfix wird dezimal interpretiert und stillschweigend nichts geladen.
 
 Verifiziert im Emulator: Übersetzung, Opcodes gegen die Zyklenrechnung, Laden nach
 `&B0000`, `CALL` beider Einsprungpunkte ohne Absturz, vollständiger Durchlauf aus BASIC
-über das Renderer-Backend.
+über das Renderer-Backend. `wstest.bas` prüft den gesamten Bitpuffer Bit für Bit gegen
+die Rechnung:
+
+| Lauf | Ergebnis |
+|---|---|
+| 2 LEDs je Eintrag, Helligkeit 255 | OK, Höchstwert 88 |
+| 2 LEDs je Eintrag, Helligkeit 100 | OK, Höchstwert 34 |
+| 1 LED je Eintrag, Helligkeit 255 | OK |
+| 2 LEDs je Eintrag, Helligkeit 0 | OK, alles 0 |
+
+In allen Läufen blieb der Speicher hinter dem erwarteten Pufferende unberührt.
 
 **Nicht verifizierbar ist das Timing selbst.** Ein Kalibriertest (`cyctest.asm`) mit zwei
 Schleifen, die sich laut Manual um Faktor drei unterscheiden müssten (6 gegen 17 Takte),
@@ -325,20 +429,24 @@ mehrdeutiger Fall.**
 Für Sonderfälle — vertauschte Segmente, Lötfehler, gemischte Laufrichtungen — gibt es
 zusätzlich die vollständige Kalibrierung LED für LED.
 
+**Lumanode:** Deren Verdrahtung ist keine der 16 Varianten. Die Schnellkalibrierung meldet
+dort erwartungsgemäß „Keine bekannte Verdrahtung passt". `calib.bas` lädt deshalb beim
+Start die mitgelieferte `matrix.map` (Abschnitt 6); Menüpunkt 3 prüft sie an der Wand.
+
 ### Dateiformat `matrix.map`
 
 | Offset | Inhalt |
 |---|---|
 | 0 | Breite |
 | 1 | Höhe |
-| 2 … | je Position ein Byte mit dem LED-Index, zeilenweise von oben links |
+| 2 … | je Position ein Byte mit dem Pixel-Index in Kettenreihenfolge, zeilenweise von oben links |
 
 Bei 12×12 also 146 Byte. Bewusst binär statt Text: `BPUT#`/`BGET#` sind in BBC BASIC (Z80)
 verlässlich verfügbar, während zeilenweises Text-I/O es nicht ist. Nachvollziehbar bleibt
 die Datei über Menüpunkt 6, der die Tabelle anzeigt und prüft, ob jeder Index genau einmal
 vorkommt.
 
-`ledmatrix.bas` lädt `matrix.map` beim Start automatisch; die Kalibrierung hat Vorrang vor
+`ledmatrix.bas` lädt `matrix.map` beim Start automatisch; die Datei hat Vorrang vor
 den eingebauten Formeln und erscheint als Mapping-Stil 3.
 
 ### Verifiziert
@@ -346,6 +454,8 @@ den eingebauten Formeln und erscheint als Mapping-Stil 3.
 Kandidatenverfahren für alle 16 Varianten, Schreiben und Lesen der Datei im Rundlauf, und
 der Dateiinhalt Byte für Byte gegen die Formel nachgerechnet — null Abweichungen, jeder
 Index genau einmal. Die Übernahme in `ledmatrix.bas` wurde mit einer Testkarte geprüft.
+Die Lumanode-`matrix.map` wird von beiden Programmen geladen; der Selbsttest von
+`ledmatrix.bas` prüft sie mit (Stil 3: jeder Index genau einmal).
 
 Nicht verifizierbar ohne Hardware: ob die Cursortasten die erwarteten Codes 136–139
 liefern. Deshalb funktioniert die Rastereingabe alternativ mit **W/A/S/D**.
@@ -369,6 +479,8 @@ lehnt MOS 3 die Schreibweise mit Pfad als „Invalid command" ab.
 
 Entscheidend für dieses Projekt: **`HIMEM` liegt in beiden Versionen bei `&B0000`**, die
 Ladeadresse der Assembler-Routine gilt also für beide.
+
+Die Tests zum Lumanode-Abgleich (Abschnitt 14) liefen nur unter MOS 2.3.3.
 
 ### Folge für `autoexec.txt`
 
@@ -396,10 +508,33 @@ agon-cli-emulator.exe --mos firmware/mos_platform.bin --sdcard ../../sdcard
 
 Damit lassen sich beide Firmwares headless testen.
 
+## 14. Abgleich mit dem Lumanode-Projekt (2026-09-13)
+
+Die Wand hing bisher an einem Arduino mit eigener Firmware (`lumanode/build_lumanode_ha.py`).
+Deren Stand wurde gegen dieses Repo gelegt:
+
+| Thema | bisher angenommen | tatsächlich | Änderung |
+|---|---|---|---|
+| LEDs | 144, eine je Pixel | **288, zwei je Pixel**, in der Kette immer benachbart | `ws2812.asm` sendet jeden Eintrag zweimal; Bitpuffer 9216 Byte |
+| Verdrahtung | unbekannt, Serpentine vermutet | bekannt: `ledPairs` der Firmware, Doppelspalten mit Zickzack | `scripts/gen_lumanode_map.py` → `matrix.map`, von beiden Programmen geladen |
+| Helligkeit | nur in der Vorschau | Firmware kappt auf 120/255, W = 0 | Helligkeitstabelle in `ws2812.asm`, max. 90 je Kanal |
+| Latch | 98 µs | SK6812 > 80 µs, WS2812B > 280 µs | 325 µs, Interrupts dabei schon frei |
+| Frame-Dauer | 5,76 ms | 11,5 ms | VDP-Risiko neu bewertet (Abschnitt 8) |
+| Farbfolge | GRBW | GRBW (`NEO_GRBW`, 800 kHz) | — |
+| Hardware | 74AHCT125, 330 Ω, gemeinsame Masse | dazu Pull-down, 100 nF, Arduino abklemmen, defektes Modul | Abschnitt 5 |
+
+`ledtest.bas` und `calib.bas` rechnen jetzt mit 288 LEDs; die Werte in `ledtest.bas`
+sind so gewählt, dass sie nach der Helligkeitsbremse dieselbe Helligkeit ergeben wie
+vorher. Geprüft im CLI-Emulator unter MOS 2.3.3: `wstest.bas`, die Selbsttests von
+`ledmatrix.bas` und `calib.bas` sowie ein kompletter Durchlauf von `ledtest.bas`.
+
 ## Quellen
 
 - [Agon GPIO-Dokumentation](https://agonplatform.github.io/agon-docs/GPIO/)
 - [eZ80-GPIO aus Assembler](https://mikolajczyk.org/posts/agon_simple_gpio/) — Registertabelle
 - [eZ80F92 Datenblatt](https://www.zilog.com/docs/ez80acclaim/ps0153.pdf) — SPI, Timer, GPIO
-- [AgonLight2 Schaltplan](https://github.com/OLIMEX/AgonLight2)
+- [eZ80 CPU User Manual UM0077](https://www.zilog.com/docs/um0077.pdf) — Befehlszyklen
+- [AgonLight2 Schaltplan und Handbuch](https://github.com/OLIMEX/AgonLight2) — Pegel, 5-V-Pin, UART-Leitungen
+- [Agon MOS Quellcode](https://github.com/AgonPlatform/agon-mos) — Portbelegung durch MOS
+- Lumanode-Projekt: `build_lumanode_ha.py` (Verdrahtung, Helligkeit), `debugFreeze.md` (defektes Modul)
 - Lokal: `sdcard/docs/VDP---Screen-Modes.md`, `VDP---PLOT-Commands.md`, `VDP---VDU-Commands.md`
