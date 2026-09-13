@@ -9,32 +9,36 @@ Alles liegt in `sdcard/progs/`:
 
 | Datei | Zweck | Stand |
 |---|---|---|
+| `start.bas` | Startprogramm ohne Bildschirm: Menü per Taste, Rückmeldung mit Tönen | auf dem Agon geprüft |
 | `ledmatrix.bas` | Hauptprogramm: Framebuffer, Mapping, Vorschau, Demos, GPIO-Ausgabe | läuft, Grafik ungeprüft |
 | `calib.bas` | Kalibrierung bzw. Prüfung der Verdrahtung, schreibt `matrix.map` | Logik verifiziert |
 | `ledtest.bas` | Minimalprogramm für die erste Inbetriebnahme, ohne Grafik | läuft |
 | `ws2812.asm` | zeitkritische Bitausgabe auf PC4 mit Pixelverdopplung und Helligkeitsbremse | Entpacken verifiziert, Timing ungeprüft |
 | `wstest.bas` | Selbsttest für `ws2812.bin`: Entpacken, Verdopplung, Helligkeit | alles OK |
 | `matrix.map` | Verdrahtung der Lumanode-Wand, erzeugt von `scripts/gen_lumanode_map.py` | geprüft |
+| `scripts/agonmon.py` | Terminal über USB (Konsolenmodus des VDP) | Weg auf dem Agon geprüft, Skript selbst nicht interaktiv |
 | `cyctest.asm` | Messhilfe für Instruktionszyklen | zeigte: Emulator taugt dafür nicht |
 
 **Fertig und verifiziert:** Framebuffer und Mapping (M0), Kalibrierverfahren mit allen
 16 Verdrahtungen (M1), Übersetzung und Ablauf der Assemblerroutine (M2), Abgleich mit dem
-Lumanode-Projekt: 288 LEDs, echte Verdrahtung, Strombremse (Abschnitt 14). Beide MOS-
-Versionen geprüft (Abschnitt 13).
+Lumanode-Projekt: 288 LEDs, echte Verdrahtung, Strombremse (Abschnitt 14). Betrieb ohne
+Bildschirm mit Autostart, Tönen und Konsole über USB, auf dem Agon geprüft (Abschnitt 15).
+Drei MOS-Versionen geprüft (Abschnitt 13).
 
 **Offen — braucht Hardware:**
 
 1. **Das SK6812-Timing.** Rechnerisch geht es auf, gemessen ist es nicht. Der Emulator
    zählt keine echten Zyklen, kann es also nicht beantworten (Abschnitt 11).
-2. **VDP-Verkehr während der Interrupt-Sperre** (11,5 ms je Frame, Abschnitt 8).
+2. **Tastenverlust während der LED-Ausgabe** — gemessen, nicht gelöst (Abschnitt 8).
 3. **Die Bildschirmvorschau** wurde nie angesehen — nur geprüft, dass sie fehlerfrei
    durchläuft und die Farbwerte stimmen.
 4. **M3 und M4** (Integration an der Wand, Effektbibliothek).
 
 **Nächster Schritt:** Pegelwandler nach Abschnitt 5 aufbauen, den Arduino von der
-Datenleitung trennen, dann mit `ledtest.bas` den ersten Kontakt herstellen. Zeigt dessen
-Test 3 statt schwachem Weiß bunte Farben, stimmt das Timing nicht — dann sind die NOPs in
-`ws2812.asm` anzupassen oder Plan B (SPI, Abschnitt 4) zu ziehen. Vorher das bekannte
+Datenleitung trennen, das Testmodul anschließen und im Menü von `start.bas` (Abschnitt 15)
+eine Taste drücken. Zeigt Schritt 6 des LED-Tests statt schwachem Weiß bunte Farben, stimmt
+das Timing nicht — dann sind die NOPs in `ws2812.asm` anzupassen oder Plan B (SPI,
+Abschnitt 4) zu ziehen. Vorher das bekannte
 defekte Modul reparieren (Abschnitt 5), sonst ist ein Timingfehler nicht von dessen
 Aussetzern zu unterscheiden.
 
@@ -44,7 +48,7 @@ Aussetzern zu unterscheiden.
 |---|---|
 | Matrix | 144 Pixel (12×12) aus 36 Modulen à 2×2 Pixel, **2 LEDs je Pixel = 288 LEDs**, SK6812 RGBNW, 12 V, Gehäuse nach [LumaNode](https://www.kickstarter.com/projects/printableaccessories/lumanode) |
 | Bisher | Arduino UNO R4 WiFi mit eigener Firmware (Projekt `lumanode`, `build_lumanode_ha.py`), Daten an Pin 13. Daraus stammen Verdrahtung und Helligkeitsgrenze. |
-| Rechner | Agon Light 2 (Olimex), eZ80 @ 18,432 MHz, MOS 2.3.3 |
+| Rechner | Agon Light 2 (Olimex), eZ80 @ 18,432 MHz; auf dem Gerät Agon Platform MOS 3 (Arthur), im Emulator MOS 2.3.3 |
 | Sprache | BBC BASIC (ADL, `/bin/bbcbasic24`) + eZ80-Assembler für die Bitausgabe |
 | Stromversorgung | extern, nur Masse und Datenleitung gehen zum Agon |
 
@@ -220,6 +224,7 @@ Menüpunkt 3 läuft die Kette ab und zeigt parallel, wo jeder Pixel leuchten mus
 | **M1** ✓ | Kalibrierprogramm, `matrix.map` laden/speichern | Matrix |
 | **M2** ~ | Assembler-Ausgaberoutine mit Verdopplung und Helligkeitsbremse; Entpacken verifiziert, Timing offen | alles |
 | **L** ✓ | Abgleich mit dem Lumanode-Projekt (Abschnitt 14) | nein |
+| **H** ✓ | Betrieb ohne Bildschirm: Autostart, Töne, Konsole über USB (Abschnitt 15) | Agon |
 | **M3** | Integration, erste Animation auf der Wand | alles |
 | **M4** | Effektbibliothek: Lauflicht, Plasma, Text-Scroller, Bilder von SD | alles |
 
@@ -232,14 +237,39 @@ rechnerisch — ob die reale Hardware dieselben Zeiten liefert, ist offen. Warte
 Codeabruf aus dem externen RAM oder beim I/O-Zugriff würden alles verschieben. Der Emulator
 kann es nicht beantworten. Greift sonst Plan B.
 
-**VDP-Verkehr während der Interrupt-Sperre.** Ein Frame sperrt die Interrupts 11,5 ms.
-UART0 zum VDP läuft mit 1.152.000 Baud; sein 16-Byte-FIFO ist nach rund 140 µs voll.
-Schickt der VDP in dieser Zeit etwas (Tastendruck, Antwort auf eine VDU-Abfrage), kann es
-verloren gehen. Test an der Hardware: Dauerbetrieb mit vielen Frames und dabei auf der
-Tastatur tippen. Falls MOS danach hängt oder Tasten fehlen: vor jedem Frame RTS an UART0
-zurücknehmen und nach dem Frame wieder setzen — die Leitungen `ESP32_RTS`/`ESP32_CTS`
-sind laut Schaltplan vorhanden; ob der VDP sie beachtet, ist zu prüfen. Die VBLANK-Ticks
-(50 Hz) werden höchstens verzögert; `TIME` über zehn Minuten gegen eine Uhr prüfen.
+**Tastenverlust während der LED-Ausgabe — gemessen.** Ein Frame sperrt die Interrupts
+11,5 ms; UART0 zum VDP (1.152.000 Baud, 16-Byte-FIFO) läuft in dieser Zeit über. Gemessen
+auf dem Agon, je 30 Tasten über den Konsolenmodus im Abstand von 0,33 s:
+
+| Lauf | LED-Ausgabe | Töne | RTS vor dem Frame aus | Tasten angekommen |
+|---|---|---|---|---|
+| A | keine | nein | — | 30 / 30 |
+| B | Dauer, 37,8 Frames/s | nein | nein | 24 / 30 |
+| C | Dauer | nein | ja | 25 / 30 |
+| E | Dauer | nein | ja, Duplex-Flag erneut gesendet | 25 / 30 |
+| D | Dauer | Klick je Taste | ja | 21 / 30 |
+| Dauertest in `start.bas` | Dauer, ~31 Frames/s | Klick je Taste | nein | 14 / 30 |
+
+- Die Eingabe selbst ist zuverlässig (A); verloren geht nur, was während der Ausgabe ankommt.
+- Jede Antwort des VDP belegt denselben FIFO — hier der Status zu jedem Ton. Töne während
+  der Dauerausgabe vervielfachen den Verlust.
+- RTS zurücknehmen hilft nicht, auch nicht nach erneutem Duplex-Flag
+  (`VDU 23,0,&F8,1,1,1,0`, das Platform-MOS beim Start selbst sendet). Der VDP startet laut
+  Quelltext im Halbduplex (`HW_FLOWCTRL_RTS`) und beachtet CTS erst im Duplex. Auf diesem
+  Gerät wirkt das nicht; ob die installierte VDP-Firmware das Flag kennt, ist offen.
+- Gemessen wurde mit Tasten über USB, bei denen der VDP Drücken und Loslassen direkt
+  hintereinander schickt. Bei der echten Tastatur liegen beide Pakete rund 100 ms
+  auseinander und passen einzeln in den FIFO — der Verlust ist dort vermutlich kleiner.
+  Nachzählen im Dauertest: Die Schlusszeile nennt die angekommenen Tasten.
+
+Mögliche Abhilfen, noch nicht umgesetzt: Frames nur senden, wenn sich das Bild ändert;
+keine Töne während der Dauerausgabe; wichtige Tasten (ESC, `0`) wiederholen oder halten
+(Autorepeat der Tastatur); eine VDP-Firmware mit Duplex-Flusskontrolle; oder den FIFO in
+der Low-Phase der Bitschleife leeren und die Bytes nach dem Frame per UART-Loopback an MOS
+zurückgeben.
+
+Die VBLANK-Ticks (50 Hz) werden höchstens verzögert; `TIME` über zehn Minuten gegen eine
+Uhr prüfen.
 
 *Erledigt:* Die ursprüngliche Sorge, die Schleife müsse pro Byte ausgerollt werden, hat sich
 nicht bestätigt — im Gegenteil, das Ausrollen war mit 152 Byte zu weit für einen relativen
@@ -480,19 +510,25 @@ lehnt MOS 3 die Schreibweise mit Pfad als „Invalid command" ab.
 Entscheidend für dieses Projekt: **`HIMEM` liegt in beiden Versionen bei `&B0000`**, die
 Ladeadresse der Assembler-Routine gilt also für beide.
 
-Die Tests zum Lumanode-Abgleich (Abschnitt 14) liefen nur unter MOS 2.3.3.
+Die Tests zum Lumanode-Abgleich (Abschnitt 14) liefen unter MOS 2.3.3; `wstest.bas`
+besteht zusätzlich unter MOS 3.0.2 und Quark MOS 1.04.
 
 ### Folge für `autoexec.txt`
 
-Eine Fassung, die auf beiden läuft, gibt es nicht — schlägt eine Zeile fehl, bricht MOS die
-Datei ab. Die mitgelieferte Fassung ist auf MOS 2.3.3 ausgelegt, passend zu `run.bat`:
+Der direkte Programmaufruf unterscheidet sich, `LOAD` und `RUN` gibt es aber in allen
+Versionen. Die mitgelieferte Fassung nutzt diese Form und läuft unverändert unter Quark
+MOS 1.04, MOS 2.3.3 und MOS 3.0.2 (Emulator) sowie auf dem echten Agon (MOS 3):
 
 ```
+SET KEYBOARD 2
+VDU 23 0 254 1
 cd /progs
-/bin/bbcbasic24
+LOAD /bin/bbcbasic24.bin
+RUN . /progs/start.bas
 ```
 
-Läuft auf der echten Hardware MOS 3.x, ist Zeile 2 zu `bbcbasic24` zu ändern.
+`RUN .` übergibt den Programmnamen an BASIC, das ihn sofort lädt und startet. Schlägt eine
+Zeile fehl, bricht MOS die Datei ab; `SET KEYBOARD` und `VDU` brauchen MOS 1.03 oder neuer.
 
 ### Emulator-Firmware wählen
 
@@ -528,6 +564,40 @@ sind so gewählt, dass sie nach der Helligkeitsbremse dieselbe Helligkeit ergebe
 vorher. Geprüft im CLI-Emulator unter MOS 2.3.3: `wstest.bas`, die Selbsttests von
 `ledmatrix.bas` und `calib.bas` sowie ein kompletter Durchlauf von `ledtest.bas`.
 
+## 15. Betrieb ohne Bildschirm (2026-09-13)
+
+Der Agon hat keinen Monitor, nur Tastatur und Kopfhörer. Dafür:
+
+- `autoexec.txt` (Abschnitt 13) startet `start.bas` direkt.
+- `start.bas` meldet sich über Töne (Audio-API `VDU 23,0,&85`). Aufeinanderfolgende Töne
+  laufen abwechselnd auf Kanal 1 und 2: Auf einem Kanal gingen Noten verloren, weil der VDP
+  Noten für einen belegten Kanal verwirft und `TIME` nur in 20-ms-Schritten zählt.
+  Tonschema und Tasten stehen in der README unter „Betrieb ohne Bildschirm".
+- Der Konsolenmodus des VDP (`VDU 23,0,&FE,1`) schickt alle Ausgaben über den USB-Anschluss
+  des Agon (CH340, 115200 Baud), und dort gesendete Zeichen kommen als Tastendrücke an.
+  Von VDU-Befehlen erscheint nur das Byte 23, die Ausgabe bleibt lesbar.
+  `scripts/agonmon.py` ist das Terminal dafür. DTR und RTS bleiben aus, sonst setzt der
+  Wandler den ESP32 zurück.
+
+### Auf dem Gerät geprüft
+
+| | Ergebnis |
+|---|---|
+| Firmware | Agon Platform MOS 3 (Arthur), aus dem Flash gelesen |
+| Autostart | `autoexec.txt` → `start.bas`, Konsole aktiv, „Bereit" kommt über USB an |
+| Eingabe über USB | Leertaste startet den LED-Test, alle sechs Schritte laufen durch |
+| `ws2812.bin` | lädt, jeder Frame kehrt zurück; ohne BASIC-Rechnung 37,8 Frames/s |
+| Programm ändern ohne Umstecken | Zeilen über USB eingetippt, `SAVE "/progs/start.bas"`, `RUN` |
+| Töne | nach der Kanal-Korrektur alle drei Noten hörbar |
+| Tasten während der Ausgabe | gehen teilweise verloren (Abschnitt 8) |
+
+Ob die LEDs richtig leuchten, zeigt erst das angeschlossene Modul — der Datenpin ist
+noch nicht gemessen.
+
+Die `start.bas` auf der SD-Karte im Agon wurde von BASIC per `SAVE` geschrieben und kann
+sich in der Formatierung vom Repo unterscheiden. Beim nächsten Umstecken die Fassung aus dem
+Repo kopieren.
+
 ## Quellen
 
 - [Agon GPIO-Dokumentation](https://agonplatform.github.io/agon-docs/GPIO/)
@@ -535,6 +605,7 @@ vorher. Geprüft im CLI-Emulator unter MOS 2.3.3: `wstest.bas`, die Selbsttests 
 - [eZ80F92 Datenblatt](https://www.zilog.com/docs/ez80acclaim/ps0153.pdf) — SPI, Timer, GPIO
 - [eZ80 CPU User Manual UM0077](https://www.zilog.com/docs/um0077.pdf) — Befehlszyklen
 - [AgonLight2 Schaltplan und Handbuch](https://github.com/OLIMEX/AgonLight2) — Pegel, 5-V-Pin, UART-Leitungen
-- [Agon MOS Quellcode](https://github.com/AgonPlatform/agon-mos) — Portbelegung durch MOS
+- [Agon MOS Quellcode](https://github.com/AgonPlatform/agon-mos) — Portbelegung durch MOS, Duplex-Flag
+- [Agon VDP Quellcode](https://github.com/AgonConsole8/agon-vdp) — Konsolenmodus, 115200 Baud, Flusskontrolle
 - Lumanode-Projekt: `build_lumanode_ha.py` (Verdrahtung, Helligkeit), `debugFreeze.md` (defektes Modul)
 - Lokal: `sdcard/docs/VDP---Screen-Modes.md`, `VDP---PLOT-Commands.md`, `VDP---VDU-Commands.md`
