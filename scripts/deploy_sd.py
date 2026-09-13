@@ -11,6 +11,10 @@ gibt es noch keine autoexec.alt, wird sie zuerst als autoexec.alt gesichert.
 Nie angefasst werden MOS.bin, firmware.bin (Flash-Images) und alle anderen
 Ordner der Karte.
 
+Ohne Umstecken geht es per USB mit scripts/agonload.py (eine Datei je
+Aufruf, Karte bleibt im Agon). Dieses Skript ist fuer den Fall, dass der
+Konsolenmodus nicht laeuft, oder fuer eine frisch eingerichtete Karte.
+
 ws2812.bin ist nicht im Repo, es wird gebaut - siehe scripts/emutest.py.
 Danach die Karte in Windows "auswerfen" und in den Agon stecken.
 """

@@ -9,6 +9,11 @@ Eingaben wie bei emutest.py:
   sonst        Zeile + CR senden
 Zeichen gehen einzeln mit 30 ms Abstand hinaus, wie getippt.
 
+Wartemuster so waehlen, dass sie nicht schon im Echo der getippten Zeile
+stehen (etwa 'CHK [0-9]+' statt 'CHK'), und erst tippen, wenn der Agon am
+Prompt ist: Tasten, die waehrend einer Rechnung ankommen, und die erste
+Taste direkt nach ESC in start.bas gehen verloren.
+
 Voraussetzung: Der Konsolenmodus des VDP ist an (autoexec.txt und start.bas
 schalten ihn ein). Dann kommt jede Ausgabe ueber USB an, und gesendete
 Zeichen landen beim Agon wie Tastendruecke. Der Port darf nicht gleichzeitig

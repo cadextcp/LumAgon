@@ -33,7 +33,7 @@ von dort mit `/bin/bbcbasic24` wieder in BASIC (auf dem Gerät mit MOS 3: `bbcba
 | `sdcard/progs/` | **Hier kommen eigene Programme hin.** Direkt mit jedem Editor bearbeitbar. |
 | `docs/PLAN.md` | Projektplan LED-Wand: Stand, Architektur, Messwerte, offene Punkte |
 | `AGENTS.md` | Übergabe für Agenten: Stand, Hardware beim Nutzer, Regeln, Werkzeuge (`CLAUDE.md` verweist darauf) |
-| `scripts/` | Hilfsskripte (Python): `emutest.py` und `agonctl.py` steuern Emulator bzw. Agon für Tests, `agonmon.py` ist das Terminal über USB, `deploy_sd.py` spielt den Stand auf die SD-Karte, `gen_lumanode_map.py` erzeugt `matrix.map` |
+| `scripts/` | Hilfsskripte (Python): `emutest.py` und `agonctl.py` steuern Emulator bzw. Agon für Tests, `agonmon.py` ist das Terminal über USB, `agonload.py` schreibt eine Datei per USB auf die Karte im Agon, `deploy_sd.py` spielt den Stand auf die Karte im Kartenleser, `gen_lumanode_map.py` erzeugt `matrix.map` |
 | `sdcard/bin/` | BBC BASIC + Utilities (Assembler, vi, unzip …) |
 | `sdcard/demos/` | Beispielprogramme in BASIC (Cube, Mandelbrot, Sprites, Sound …) |
 | `sdcard/games/` | Fertige Spiele zum Ausprobieren |
@@ -87,6 +87,13 @@ python scripts/agonmon.py
 
 Strg+] beendet, braucht `pyserial`. Auf diesem Weg lassen sich auch Programmzeilen
 eintippen und mit `SAVE` auf die SD-Karte im Agon schreiben, ohne sie umzustecken.
+
+**Dateien per USB auf die Karte:** `python scripts/agonload.py DATEI [ZIEL]` schreibt eine
+beliebige Datei auf die SD-Karte im Agon, auch Binärdateien wie `ws2812.bin` — ohne
+Umstecken. `ZIEL` ohne führenden Schrägstrich angeben, etwa `progs/start.bas`. Das Skript
+führt den Agon selbst zum MOS-Prompt, überträgt mit `hexload` (CRC-geprüft, erst in eine
+temporäre Datei) und startet danach `start.bas` wieder. Details in
+[docs/PLAN.md](docs/PLAN.md), Abschnitt 16.
 
 ## Workflow
 

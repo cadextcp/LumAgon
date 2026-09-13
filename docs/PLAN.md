@@ -17,13 +17,15 @@ Alles liegt in `sdcard/progs/`:
 | `wstest.bas` | Selbsttest für `ws2812.bin`: Entpacken, Verdopplung, Helligkeit | alles OK |
 | `matrix.map` | Verdrahtung der Lumanode-Wand, erzeugt von `scripts/gen_lumanode_map.py` | geprüft |
 | `scripts/agonmon.py` | Terminal über USB (Konsolenmodus des VDP) | Weg auf dem Agon geprüft, Skript selbst nicht interaktiv |
+| `scripts/agonload.py` | Datei per USB auf die SD-Karte im Agon (hexload, CRC-geprüft) | auf dem Agon geprüft |
 | `cyctest.asm` | Messhilfe für Instruktionszyklen | zeigte: Emulator taugt dafür nicht |
 
 **Fertig und verifiziert:** Framebuffer und Mapping (M0), Kalibrierverfahren mit allen
 16 Verdrahtungen (M1), Übersetzung und Ablauf der Assemblerroutine (M2), Abgleich mit dem
 Lumanode-Projekt: 288 LEDs, echte Verdrahtung, Strombremse (Abschnitt 14). Betrieb ohne
 Bildschirm mit Autostart, Tönen und Konsole über USB, auf dem Agon geprüft (Abschnitt 15).
-Drei MOS-Versionen geprüft (Abschnitt 13).
+Drei MOS-Versionen geprüft (Abschnitt 13). Dateien gehen per USB auf die Karte im Agon
+(Abschnitt 16).
 
 **Offen — braucht Hardware:**
 
@@ -594,9 +596,74 @@ Der Agon hat keinen Monitor, nur Tastatur und Kopfhörer. Dafür:
 Ob die LEDs richtig leuchten, zeigt erst das angeschlossene Modul — der Datenpin ist
 noch nicht gemessen.
 
-Die `start.bas` auf der SD-Karte im Agon wurde von BASIC per `SAVE` geschrieben und kann
-sich in der Formatierung vom Repo unterscheiden. Beim nächsten Umstecken die Fassung aus dem
-Repo kopieren.
+Die per `SAVE` geschriebene `start.bas` auf der Karte ist inzwischen per
+`scripts/agonload.py` durch die Fassung aus dem Repo ersetzt und am Gerät gegengeprüft
+(Abschnitt 16).
+
+## 16. Dateien auf die SD-Karte ohne Umstecken (2026-09-13)
+
+### Über USB — umgesetzt
+
+`scripts/agonload.py DATEI [ZIEL]` schreibt eine beliebige Datei, auch Binärdateien wie
+`ws2812.bin`, über den USB-Anschluss auf die Karte im Agon. Grundlage ist `hexload` von
+Jeroen Venema: `hexload.bin` liegt in `/mos` der Karte, der VDP bringt den Empfangsteil mit
+(`VDU 23,28`). Das Skript baut den PC-Teil (`send.py`) nach und braucht nur `pyserial`.
+
+Ablauf:
+
+1. Agon zum MOS-Prompt: ESC, „Bereit“ abwarten, `0`, „Ende - zurueck zu BASIC“ abwarten,
+   `*BYE`, Prompt `/progs *` abwarten. Jeder Schritt wird an der Ausgabe bestätigt.
+2. `hexload vdp /progs/agonload.tmp` eintippen. Erst wenn der VDP „Receiving Intel HEX
+   records“ meldet, geht das erste HEX-Zeichen hinaus — sonst landete es als Tastendruck im
+   Menü von `start.bas`.
+3. Intel HEX im erweiterten Format: ein Startsatz mit der CRC32 über alle Daten, jede Zeile
+   mit einer CRC16 (Polynom 0x8005, CRC-16/BUYPASS), die der VDP mit seiner eigenen CRC16
+   beantwortet. Bei Abweichung geht die Zeile erneut hinaus. Am Ende schickt der VDP die
+   CRC32, `hexload` meldet die geschriebenen Bytes.
+4. Nur wenn CRC32 und Bytezahl stimmen: das alte Ziel löschen, die temporäre Datei
+   umbenennen. `hexload` löscht seine Zieldatei schon vor dem Schreiben, auch bei einem
+   Abbruch — eine direkt überschriebene und dann kaputte `ws2812.bin` würde den Autostart
+   lahmlegen.
+5. BASIC und `start.bas` neu starten.
+
+Die Daten landen ab `&40000` im Speicher, dort läuft BASIC — daher der Weg über den
+MOS-Prompt. `hexload` selbst läuft ab `&B0000` und überschreibt die geladene `ws2812.bin`;
+`start.bas` lädt sie beim Start neu.
+
+Auf dem Agon geprüft:
+
+| Datei | Größe | Dauer | Prüfung |
+|---|---|---|---|
+| Testdatei aus Zufallsbytes | 3000 Byte | 2,6 s | CRC32 ok, Prüfsumme per BASIC am Gerät gleich |
+| `start.bas` aus dem Repo, ersetzt die vorhandene | 6611 Byte | 5,2 s | CRC32 ok, Prüfsumme gleich, `start.bas` startet |
+
+Gelernt dabei:
+
+- Die VDP-Firmware des Geräts beherrscht das erweiterte Format (antwortet mit „Extended
+  mode“ und der CRC16).
+- Im Konsolenmodus spiegelt der VDP auch seine eigenen Meldungen („Receiving Intel HEX
+  records“, „CRC32 OK“, „VDP done“). Das Skript sucht die CRC-Bytes deshalb im Datenstrom,
+  statt genau zwei Bytes zu erwarten.
+- `DELETE` einer einzelnen Datei fragt unter MOS 3 nicht nach.
+- Tasten gehen verloren, wenn sie ankommen, während BASIC rechnet, und direkt nach ESC in
+  `start.bas` — BBC BASIC leert beim Quittieren von Escape den Tastaturpuffer. Befehle erst
+  senden, wenn ein Prompt oder eine Meldung da ist; Wartemuster so wählen, dass sie nicht
+  schon im Echo der getippten Zeile stehen. Der erste Versuch scheiterte genau daran: Die
+  Menüzeile von `start.bas` enthält „0 Ende“ und täuschte das Ende von `start.bas` vor.
+
+Umstecken braucht es nur noch, wenn der Konsolenmodus nicht läuft, etwa nach einer kaputten
+`autoexec.txt` — dann `scripts/deploy_sd.py` mit der Karte im Kartenleser.
+
+### Über WLAN — nicht umgesetzt
+
+- Der ESP32 des Agon hat WLAN, die VDP-Firmware nutzt es aber nicht. Eine eigene Firmware
+  nur dafür wäre ein großer Umbau neben Bild, Ton und Tastatur — nicht empfohlen.
+- Nachrüstbar ist ein ESP8266-Modul am UEXT-Anschluss (etwa Olimex MOD-WIFI-ESP8266) mit
+  den Agon-MOS-Tools von nihirash: `Netman` verbindet das Modul mit dem WLAN, der
+  Gopher-Browser `Snail` kann laut Beschreibung Dateien aus dem Netz laden. Das ist ein
+  Abholen vom Agon aus — auf dem PC bräuchte es einen Gopher-Server —, kein Schieben vom
+  PC. Nicht im Detail geprüft.
+- Solange der Agon ohnehin per USB am PC hängt, bringt WLAN nichts dazu.
 
 ## Quellen
 
@@ -606,6 +673,8 @@ Repo kopieren.
 - [eZ80 CPU User Manual UM0077](https://www.zilog.com/docs/um0077.pdf) — Befehlszyklen
 - [AgonLight2 Schaltplan und Handbuch](https://github.com/OLIMEX/AgonLight2) — Pegel, 5-V-Pin, UART-Leitungen
 - [Agon MOS Quellcode](https://github.com/AgonPlatform/agon-mos) — Portbelegung durch MOS, Duplex-Flag
-- [Agon VDP Quellcode](https://github.com/AgonConsole8/agon-vdp) — Konsolenmodus, 115200 Baud, Flusskontrolle
+- [Agon VDP Quellcode](https://github.com/AgonConsole8/agon-vdp) — Konsolenmodus, 115200 Baud, Flusskontrolle, `hexload.h`
+- [agon-hexload](https://github.com/AgonPlatform/agon-hexload) — `hexload.bin`, `send.py`, Übertragungsprotokoll
+- [Agon-MOS-Tools](https://github.com/nihirash/Agon-MOS-Tools) — Netman, Snail (ESP8266 am UEXT)
 - Lumanode-Projekt: `build_lumanode_ha.py` (Verdrahtung, Helligkeit), `debugFreeze.md` (defektes Modul)
 - Lokal: `sdcard/docs/VDP---Screen-Modes.md`, `VDP---PLOT-Commands.md`, `VDP---VDU-Commands.md`
