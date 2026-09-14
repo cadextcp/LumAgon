@@ -5,7 +5,7 @@ direkt von einem **Agon Light 2** aus: BBC BASIC plus eine zeitkritische Routine
 eZ80-Assembler, Daten über GPIO PC4 und einen Pegelwandler SN74AHCT125N.
 
 Lies zuerst **`docs/PLAN.md`, Abschnitt 0** (Kurzfassung, Stand, offene Punkte) und die
-**README** (Aufbau des Repos, Emulator, Betrieb ohne Bildschirm).
+**README** (Aufbau des Repos, Emulator, Betrieb ohne Monitor).
 
 ## Stand (2026-09-13)
 
@@ -15,7 +15,7 @@ Lies zuerst **`docs/PLAN.md`, Abschnitt 0** (Kurzfassung, Stand, offene Punkte) 
   (37,8 Frames/s), Dateien per USB auf die SD-Karte (PLAN, Abschnitt 16). Pegelwandler
   aufgebaut und am Testmodul erprobt: LED-Test komplett durchgelaufen, Schritt 6 schwaches
   gleichmäßiges Weiß — **das SK6812-Timing ist bestätigt** (PLAN, Abschnitte 5 und 11).
-  Nächster Schritt: defektes Modul (heute Kettenposition 30) reparieren, dann
+  Nächster Schritt: defektes Modul reparieren, dann
   Wand-Integration M3 (PLAN, Abschnitt 0).
 - Bekanntes Problem: Während der LED-Ausgabe gehen Tastendrücke verloren, RTS-Steuerung
   hilft nicht (PLAN, Abschnitt 8, mit Messwerten und Ideen).
@@ -24,19 +24,18 @@ Lies zuerst **`docs/PLAN.md`, Abschnitt 0** (Kurzfassung, Stand, offene Punkte) 
 
 | | |
 |---|---|
-| Rechner | Agon Light 2 (Olimex), **Agon Platform MOS 3 („Arthur")**, **kein Monitor** — nur Kopfhörer und Tastatur |
-| Verbindung zum PC | USB-C, USB-Seriell-Wandler CH340, bisher **COM7**, 115200 Baud |
+| Rechner | Agon Light 2 (Olimex), **Agon Platform MOS 3 („Arthur")**, **ohne Monitor** — nur Tastatur und Kopfhörer |
+| Verbindung zum PC | USB-C mit USB-Seriell-Wandler CH340, 115200 Baud |
 | LEDs | vorerst ein einzelnes Testmodul (4 Pixel, 8 LEDs); später die ganze Wand |
 | Pegelwandler | SN74AHCT125N, Schaltung in PLAN, Abschnitt 5 |
-| Vorher | Arduino UNO R4 WiFi mit eigener Firmware, Ordner `C:\Users\cadex\projekte\lumanode` (kein Git). Dort liegt `build_lumanode_ha.py` mit der Verdrahtungstabelle `ledPairs` und `debugFreeze[...]
+| Vorgänger-Hardware | Arduino UNO R4 WiFi mit eigener Firmware. `build_lumanode_ha.py` enthält die Verdrahtungstabelle `ledPairs` |
 
 **SD-Karte:** Sie steckt im Agon und bleibt dort. Dateien kommen per USB darauf
-(`scripts/agonload.py`, auch Binärdateien). Umstecken in den Kartenleser des PCs (bisher
-Laufwerk H:) ist nur nötig, wenn der Konsolenmodus nicht läuft, etwa nach einer kaputten
-`autoexec.txt` — dann `scripts/deploy_sd.py`, und den Nutzer darum bitten, nicht
-voraussetzen.
+(`scripts/agonload.py`, auch Binärdateien). Umstecken in einen PC-Kartenleser ist nur nötig, 
+wenn der Konsolenmodus nicht läuft, etwa nach einer kaputten `autoexec.txt` — 
+dann `scripts/deploy_sd.py` verwenden, und den Nutzer darum bitten, nicht als Routine vorauszusetzen.
 
-**Inhalt der Karte im Agon:** `autoexec.txt` wie im Repo, das Original des Nutzers als
+**Inhalt der Karte im Agon:** `autoexec.txt` wie im Repo, das Original des Nutzers gesichert als
 `autoexec.alt` (`SET KEYBOARD 2` / `LOAD bbcbasic.bin` / `RUN`), `/progs` mit allen Dateien
 aus `sdcard/progs/` (`start.bas` zuletzt per `agonload.py` aus dem Repo geschrieben und am
 Gerät gegengeprüft). `/bin` (bbcbasic24, ez80asm) ist identisch mit dem Emulator, `/mos`
@@ -74,7 +73,7 @@ oder Lagerbestand begrenzt ist.
 
 ## Regeln, die nicht verhandelbar sind
 
-- **Agon-GPIOs sind nicht 5-V-tolerant.** Nie 5 V, DIN oder den Arduino direkt an einen
+- **Agon-GPIOs sind nicht 5-V-tolerant.** Nie 5 V oder einen anderen Treiber direkt an einen
   Agon-Pin. Nur über den 74AHCT125 oder das ARCELI-Modul (PLAN, Abschnitt 5).
 - **Helligkeitsbremse:** `MAXB = 90` in `ws2812.asm` begrenzt jeden Kanal. Nicht erhöhen,
   ohne dass der Nutzer den Strom gemessen hat (max. 3 A je Einspeisung).
@@ -99,7 +98,7 @@ oder Lagerbestand begrenzt ist.
 | echten Agon steuern und mitlesen | `python scripts/agonctl.py …` — Beispiele im Kopf des Skripts |
 | Datei per USB auf die Karte im Agon | `python scripts/agonload.py DATEI [ZIEL]`, ZIEL ohne führenden `/`, etwa `progs/ws2812.bin` |
 | Terminal für den Nutzer | `python scripts/agonmon.py` (Strg+] beendet) |
-| ganzen Stand auf die Karte im Kartenleser | `python scripts/deploy_sd.py H:` (erst `--dry-run`) |
+| ganzen Stand auf die Karte im Kartenleser | `python scripts/deploy_sd.py <Laufwerk>` (erst `--dry-run`) |
 | Verdrahtungstabelle neu | `python scripts/gen_lumanode_map.py` nach Änderung von `ledPairs` |
 
 Nur ein Skript zur Zeit darf den COM-Port offen haben.
@@ -112,7 +111,7 @@ Nur ein Skript zur Zeit darf den COM-Port offen haben.
 - Die `autoexec.txt` startet `start.bas`; mit der Taste `0` geht es in den BASIC-Prompt.
 
 **Am Gerät** sieht man nichts — nur, was über USB zurückkommt, und was der Nutzer hört
-(Tonschema: README, „Betrieb ohne Bildschirm"). Über `agonctl.py` lassen sich Tasten
+(Tonschema: README, „Betrieb ohne Monitor"). Über `agonctl.py` lassen sich Tasten
 senden, BASIC-Zeilen eintippen und Befehle am MOS-Prompt ausführen.
 
 **Tippen über USB — was verloren geht:**
