@@ -24,11 +24,11 @@ Lies zuerst **`docs/PLAN.md`, Abschnitt 0** (Kurzfassung, Stand, offene Punkte) 
 
 | | |
 |---|---|
-| Rechner | Agon Light 2 (Olimex), **Agon Platform MOS 3 („Arthur“)**, **kein Monitor** — nur Kopfhörer und Tastatur |
+| Rechner | Agon Light 2 (Olimex), **Agon Platform MOS 3 („Arthur")**, **kein Monitor** — nur Kopfhörer und Tastatur |
 | Verbindung zum PC | USB-C, USB-Seriell-Wandler CH340, bisher **COM7**, 115200 Baud |
 | LEDs | vorerst ein einzelnes Testmodul (4 Pixel, 8 LEDs); später die ganze Wand |
 | Pegelwandler | SN74AHCT125N, Schaltung in PLAN, Abschnitt 5 |
-| Vorher | Arduino UNO R4 WiFi mit eigener Firmware, Ordner `C:\Users\cadex\projekte\lumanode` (kein Git). Dort liegt `build_lumanode_ha.py` mit der Verdrahtungstabelle `ledPairs` und `debugFreeze.md` zum defekten Modul 6 (heute Kettenposition 30). |
+| Vorher | Arduino UNO R4 WiFi mit eigener Firmware, Ordner `C:\Users\cadex\projekte\lumanode` (kein Git). Dort liegt `build_lumanode_ha.py` mit der Verdrahtungstabelle `ledPairs` und `debugFreeze[...]
 
 **SD-Karte:** Sie steckt im Agon und bleibt dort. Dateien kommen per USB darauf
 (`scripts/agonload.py`, auch Binärdateien). Umstecken in den Kartenleser des PCs (bisher
@@ -42,10 +42,40 @@ aus `sdcard/progs/` (`start.bas` zuletzt per `agonload.py` aus dem Repo geschrie
 Gerät gegengeprüft). `/bin` (bbcbasic24, ez80asm) ist identisch mit dem Emulator, `/mos`
 enthält `hexload.bin`. Alles andere auf der Karte gehört dem Nutzer.
 
+## Pegelwandler: Optionen
+
+### Option 1: SN74AHCT125N (Einzelkomponente)
+
+Schaltung in `docs/PLAN.md`, Abschnitt 5. Erprobt und im Projekt freigegeben.
+
+- **Vorteil:** Billig, minimal, bekannt im Projekt.
+- **Nachteil:** Löten, Schaltung muss selbst aufgebaut werden.
+
+### Option 2: ARCELI Bidirektionales Level-Shifter-Modul
+
+[Amazon DE: ARCELI Converter, Bidirektionales Shifter](https://www.amazon.de/ARCELI-Converter-Bidirektionales-Shifter-Arduino/dp/B07RDHR315)
+
+Ein vorgefertigtes Modul mit 4 Kanälen, 3,3 V ↔ 5 V. Geeignet, wenn der eigene Löt-
+oder Lagerbestand begrenzt ist.
+
+- **Vorteil:** Fertig, spart Lötarbeit, 4 Kanäle für spätere Erweiterung.
+- **Nachteil:** Größer, kostet etwas mehr, bidirektionales Design ist für diesen Einsatz
+  overkill (nur 3,3 V → 5 V nötig).
+- **Anschluss:** HV1 → Agon GPIO PC4, LV1 → Agon 3,3-V-Referenz; HV2–4 und LV2–4 ungenutzt
+  festlegen. GND durchgehend verbinden, HV und LV jeweils an ihre Spannungsquelle.
+
+**Genutzte Features:**
+- 1 Kanal (HV1/LV1) für das Datensignal PC4 → SK6812
+- Level-Wandlung 3,3 V → 5 V erfüllt SK6812-Anforderung
+
+**Ungenutzte Kanäle:** An GND legen oder Pullup-Widerstände entfernen.
+
+---
+
 ## Regeln, die nicht verhandelbar sind
 
 - **Agon-GPIOs sind nicht 5-V-tolerant.** Nie 5 V, DIN oder den Arduino direkt an einen
-  Agon-Pin. Nur über den 74AHCT125 (PLAN, Abschnitt 5).
+  Agon-Pin. Nur über den 74AHCT125 oder das ARCELI-Modul (PLAN, Abschnitt 5).
 - **Helligkeitsbremse:** `MAXB = 90` in `ws2812.asm` begrenzt jeden Kanal. Nicht erhöhen,
   ohne dass der Nutzer den Strom gemessen hat (max. 3 A je Einspeisung).
 - **Flash-Images tabu:** `MOS.bin` und `firmware.bin` auf der SD-Karte nie anfassen,
@@ -63,7 +93,7 @@ enthält `hexload.bin`. Alles andere auf der Karte gehört dem Nutzer.
 
 | Aufgabe | Werkzeug |
 |---|---|
-| Emulator mit Fenster | `run.bat` (Einrichtung: README, „Einrichtung auf einem neuen Rechner“) |
+| Emulator mit Fenster | `run.bat` (Einrichtung: README, „Einrichtung auf einem neuen Rechner") |
 | Emulator ohne Fenster steuern, Tests | `python scripts/emutest.py …` — Beispiele und Eigenheiten im Kopf des Skripts |
 | `ws2812.bin` bauen | im Emulator, siehe Beispiel in `scripts/emutest.py` |
 | echten Agon steuern und mitlesen | `python scripts/agonctl.py …` — Beispiele im Kopf des Skripts |
@@ -82,17 +112,17 @@ Nur ein Skript zur Zeit darf den COM-Port offen haben.
 - Die `autoexec.txt` startet `start.bas`; mit der Taste `0` geht es in den BASIC-Prompt.
 
 **Am Gerät** sieht man nichts — nur, was über USB zurückkommt, und was der Nutzer hört
-(Tonschema: README, „Betrieb ohne Bildschirm“). Über `agonctl.py` lassen sich Tasten
+(Tonschema: README, „Betrieb ohne Bildschirm"). Über `agonctl.py` lassen sich Tasten
 senden, BASIC-Zeilen eintippen und Befehle am MOS-Prompt ausführen.
 
 **Tippen über USB — was verloren geht:**
 
 - Tasten, die ankommen, während BASIC rechnet oder die LED-Routine Bilder ausgibt.
 - Die erste Taste direkt nach ESC in `start.bas` (BBC BASIC leert beim Quittieren von
-  Escape den Tastaturpuffer) — erst die „Bereit“-Zeile abwarten.
+  Escape den Tastaturpuffer) — erst die „Bereit"-Zeile abwarten.
 - Deshalb erst tippen, wenn ein Prompt oder eine Meldung da ist, und Wartemuster so
   wählen, dass sie nicht schon im Echo der getippten Zeile stehen (`CHK [0-9]+` statt
-  `CHK`). Die Menüzeile von `start.bas` enthält selbst „0 Ende“ und „Bereit“.
+  `CHK`). Die Menüzeile von `start.bas` enthält selbst „0 Ende" und „Bereit".
 
 ## MOS-Unterschiede
 
