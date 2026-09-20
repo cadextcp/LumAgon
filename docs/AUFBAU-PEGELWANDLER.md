@@ -344,6 +344,10 @@ Tabelle unten die einzige Ortsangabe. Die drei Stiftleisten sitzen an den
 Rändern: **J1** in Spalte 18 (links), **J2** in Spalte 01 (rechts), **J3** in
 Reihe X (unten rechts).
 
+Es gibt zwei Baupläne für dieselbe Schaltung — **gebaut wird einer von beiden**:
+unten zuerst die Variante mit rechtwinkligen Litzen, danach die Variante mit
+**Klingeldraht und Lötzinn-Brücken**. Die Pad-Namen sind in beiden gleich.
+
 ![Bauplan: Pegelwandler auf Lochraster 5×7 cm](bilder/lochraster-pegelwandler.svg)
 
 *Abb.: Draufsicht (Bauteilseite). Gelötet wird auf der Unterseite — die Litzen
@@ -403,6 +407,85 @@ der Weg auf dem Bild ist der minimale.
   `D18` ↔ `M13` (J1.2 ↔ IC Pin 2): 0 Ω
 - `J14` ↔ `M14` (IC Pin 14 ↔ Pin 1): **nicht 0 Ω** (kein Kurzschluss)
 - `D18` ↔ `E18` (PC4 ↔ GND): rund **8,2 kΩ** über R2
+
+### Variante: Klingeldraht und Lötzinn-Brücken
+
+Wer lieber mit **rotem und weißem Klingeldraht** arbeitet und Pads, die
+nebeneinander liegen, einfach **mit Lötzinn verbindet**, baut dieselbe
+Schaltung nach diesem zweiten Bauplan. Elektrisch ist er identisch — nur die
+Wege sind andere: Die Litzen laufen nicht mehr rechtwinklig in Reihen und
+Spalten, sondern geradewegs von Pad zu Pad, auch schräg und auch unter dem IC
+hindurch (sie liegen ja auf der Lötseite und sind isoliert; im Bild sind sie
+dort blass gezeichnet).
+
+**Die Farbregel ist einfach: weiß ist immer Masse, rot ist alles andere**
+(+5 V, beide Datenleitungen und die 12 V). Damit trotzdem zu sehen ist, welches
+Netz eine Litze führt, hat jede im Bild einen dünnen Kern in der Netzfarbe —
+die 12-V-Litze also einen lila Kern. Sie bleibt die einzige in der rechten
+unteren Ecke und wird zuletzt gelötet.
+
+Weil direkte Wege möglich sind, sitzen drei Bauteile anders als im ersten
+Bauplan: **C1 steht dicht über dem IC** (`H15`/`H14`, ein Loch breit — der
+kürzeste denkbare Stützweg zu Pin 14 und Masse), **R1 und R2 stehen senkrecht
+unter dem IC** (`N12`/`Q12` und `N13`/`P13`) und hängen mit je einer
+Lötzinn-Brücke direkt an Pin 3 bzw. Pin 2. Stiftleisten, IC-Lage und die
+Anschlüsse nach außen sind unverändert.
+
+![Bauplan: Pegelwandler mit Klingeldraht](bilder/lochraster-pegelwandler-direkt.svg)
+
+*Abb.: Dieselbe Schaltung, mit Lötzinn-Brücken zwischen Nachbarpads und
+geraden Litzen dazwischen. Erzeugt mit `scripts/gen_perfboard_svg.py`
+(Netzliste im Skript, Tabellen darunter mit `--md direkt`).*
+
+**Zuerst die Lötzinn-Brücken** — jeweils zwei Nachbarpads, die zu einem Knoten
+werden:
+
+| # | Pads | Netz | Zweck |
+|---|---|---|---|
+| B1 | `J14` – `J13` | +5 V | IC Pin 14 an Pin 13 (OE4) |
+| B2 | `I13` – `I12` | GND | GND-Knoten an den Abzweig von Pin 12 |
+| B3 | `I12` – `J12` | GND | Abzweig über IC Pin 12 (4A) |
+| B4 | `I09` – `J09` | GND | Abzweig über IC Pin 9 (3A) |
+| B5 | `M15` – `M14` | GND | Stützpunkt an IC Pin 1 (OE1) |
+| B6 | `M14` – `N14` | GND | IC Pin 1 nach unten abgezweigt |
+| B7 | `M13` – `N13` | Daten 3,3 V | IC Pin 2 an R2 Bein 1 |
+| B8 | `M12` – `N12` | Daten 5 V | IC Pin 3 an R1 Bein 1 |
+| B9 | `M10` – `N10` | GND | Abzweig unter IC Pin 5 (2A) |
+| B10 | `M08` – `N08` | GND | Abzweig unter IC Pin 7 |
+
+**Dann die Litzen:**
+
+| # | Draht | von → nach (Pads) | Zweck |
+|---|---|---|---|
+| 1 | rot | `C18` → `H15` | J1.1 +5 V → C1 Bein 1 |
+| 2 | rot | `H15` → `J14` | C1 Bein 1 → IC Pin 14 |
+| 3 | rot | `J10` → `M11` | IC Pin 10 (OE3) → Pin 4, unter dem IC |
+| 4 | rot | `M11` → `J13` | IC Pin 4 (OE2) → Pin 13, unter dem IC |
+| 5 | weiß | `E18` → `M15` | J1.3 GND → Stützpunkt neben Pin 1 |
+| 6 | weiß | `M15` → `I16` | GND nach oben, links am IC vorbei |
+| 7 | weiß | `I16` → `I13` | GND-Knoten über dem IC |
+| 8 | weiß | `H14` → `I13` | C1 Bein 2 → GND |
+| 9 | weiß | `I12` → `I09` | IC Pin 12 (4A) → Pin 9 (3A) |
+| 10 | weiß | `I09` → `N08` | IC Pin 9 → Pin 7, unter dem IC |
+| 11 | weiß | `N08` → `N10` | IC Pin 7 → Pin 5 (2A) |
+| 12 | weiß | `P13` → `N14` | R2 Bein 2 → GND |
+| 13 | weiß | `P01` → `N08` | J2.1 GND → IC Pin 7 |
+| 14 | weiß | `X03` → `N08` | J3.2 GND → IC Pin 7 |
+| 15 | rot | `D18` → `M13` | J1.2 PC4 → IC Pin 2 |
+| 16 | rot | `Q12` → `Q01` | R1 Bein 2 → J2.2 DIN |
+| 17 | rot | `X02` → `R01` | J3.1 → J2.3 (nur die Ecke!) |
+
+Danach gilt dieselbe Prüfliste wie oben (`X02` — `R01` gegen alles andere,
+`C18` — `J14`, `E18` — `M14`, `D18` — `M13`, und rund 8,2 kΩ zwischen `D18` und
+`E18`). Zusätzlich jede Brücke mit der Lupe ansehen: Es darf kein Zinn auf ein
+drittes Pad gelaufen sein — die Stelle zwischen `J13`/`J14` und dem
+benachbarten Pin 12 ist die heikelste.
+
+**Welche Variante?** Der erste Bauplan hat kurze, rechtwinklige Wege und kommt
+ohne Lötzinn-Brücken aus — gut mit flexibler Litze. Dieser hier braucht
+weniger Draht (17 statt 20 Litzen, dafür 10 Brücken) und ist mit starrem
+Klingeldraht angenehmer zu bauen, weil jede Litze auf Länge gebogen liegen
+bleibt. Gebaut wird **einer von beiden**, nicht beide gemischt.
 
 Danach gelten Abschnitt 8 (Checkliste, ohne die Breadboard-Punkte 2) und
 Abschnitt 9 unverändert — anschließen, `start.bas` laufen lassen, Schritt 6
