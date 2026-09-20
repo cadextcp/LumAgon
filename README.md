@@ -32,6 +32,8 @@ von dort mit `/bin/bbcbasic24` wieder in BASIC (auf dem Gerät mit MOS 3: `bbcba
 | `sdcard/` | Die emulierte SD-Karte. Alles hier ist im Emulator sichtbar. |
 | `sdcard/progs/` | **Hier kommen eigene Programme hin.** Direkt mit jedem Editor bearbeitbar. |
 | `docs/PLAN.md` | Projektplan LED-Wand: Stand, Architektur, Messwerte, offene Punkte |
+| `docs/AUFBAU-PEGELWANDLER.md` | Pegelwandler 3,3→5 V: Breadboard, Lochrasterplatine, Gehäuse |
+| `gehaeuse/` | Druckbares Gehäuse für AgonLight2 + Lochrasterplatine (OpenSCAD + STL) |
 | `AGENTS.md` | Übergabe für Agenten: Stand, Hardware beim Nutzer, Regeln, Werkzeuge (`CLAUDE.md` verweist darauf) |
 | `scripts/` | Hilfsskripte (Python): `emutest.py` und `agonctl.py` steuern Emulator bzw. Agon für Tests, `agonmon.py` ist das Terminal über USB, `agonload.py` schreibt eine Datei per USB auf die Karte im Agon, `deploy_sd.py` spielt den Stand auf die Karte im Kartenleser, `gen_lumanode_map.py` erzeugt `matrix.map` |
 | `sdcard/bin/` | BBC BASIC + Utilities (Assembler, vi, unzip …) |

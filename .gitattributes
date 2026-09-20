@@ -5,3 +5,5 @@
 /sdcard/autoexec.txt text eol=crlf
 # Binaere Tabellen (matrix.map) nie umwandeln
 *.map binary
+# STL-Exporte (gehaeuse/): Zeilenenden nicht anfassen, sonst Diff-Rauschen
+*.stl binary

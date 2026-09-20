@@ -388,3 +388,37 @@ der Weg auf dem Bild ist der minimale.
 Danach gelten Abschnitt 8 (Checkliste, ohne die Breadboard-Punkte 2) und
 Abschnitt 9 unverändert — anschließen, `start.bas` laufen lassen, Schritt 6
 kontrollieren.
+
+## 12. Gehäuse für AgonLight2 + Lochrasterplatine
+
+Ein druckbares Gehäuse für den **AgonLight2 Rev B** und die Lochrasterplatine
+aus Abschnitt 11 liegt unter [`gehaeuse/`](../gehaeuse/) (OpenSCAD-Quellen,
+fertige STLs, eigene [README](../gehaeuse/README.md) mit allen Schrauben- und
+Druckdetails). Beide Platinen sitzen in einem Gehäuse mit Befestigungspunkten
+für beide.
+
+Die Agon-Maße stammen aus dem KiCad-Layout im Olimex-Repo
+[OLIMEX/AgonLight2](https://github.com/OLIMEX/AgonLight2/tree/main/HARDWARE/AgonLight2_Rev_B)
+(106,05 × 64,87 mm, 4 × M3-Bohrung).
+
+**Aufbau:** Zweiteiliges Gehäuse (114 × 148 × 31 mm), getrennt auf Höhe der
+Agon-Oberseite. Der Agon liegt hinten auf 4 Abstandshaltern, die
+Lochrasterplatine vorne auf 4 weiteren; dazwischen bleibt Platz für die
+J1-Verkabelung zum GPIO-Header. Die Rückwand hat Ausschnitte für microSD,
+USB-A, Audio, VGA, USB-C und Reset; vorne eine Kabeldurchführung für J2/J3
+(Modul und Netzteil) samt Zugentlastung. Verschraubt wird mit 6× M3×14 von
+oben durch Deckelsäulen, die unten in M3-Muttern in Sechskanttaschen im Boden
+greifen — zum Öffnen muss das Gehäuse nicht umgedreht werden.
+
+| Zusammenbau (Explosionsdarstellung) | Buchsenseite |
+|---|---|
+| ![Zusammenbau](bilder/gehaeuse-zusammenbau.png) | ![Buchsenseite](bilder/gehaeuse-buchsenseite.png) |
+
+| Beide Druckteile | AgonLight2-Modell + Lochrasterplatine |
+|---|---|
+| ![Druckteile](bilder/gehaeuse-druckteile.png) | ![Platinen](bilder/gehaeuse-agonlight2.png) |
+
+Vor dem Druck unbedingt prüfen (siehe README): Lochabstand der eigenen
+Lochrasterplatine (angenommen 2 mm Bohrung, 3 mm vom Rand) und die
+Buchsenhöhen am AgonLight2 — dafür erst `stl/gehaeuse_portwall_test.stl`
+drucken und anprobieren.
