@@ -326,7 +326,7 @@ dieses Modul sein sollte — sein *Eingang* ist gesund.
 ## 11. Die dauerhafte Version: Lochrasterplatine 5×7 cm
 
 Wer den Aufbau festschrauben will, lötet dieselbe Schaltung auf eine
-Universal-Lochrasterplatine (5×7 cm, 20×28 Löcher, Raster 2,54 mm). Elektrisch
+Universal-Lochrasterplatine (5×7 cm, 18×24 Löcher, Raster 2,54 mm). Elektrisch
 ändert sich nichts gegenüber Abschnitt 5 — nur wird die Verdrahtung eingelötet
 statt gesteckt. Erst löten, wenn das Breadboard-Setup läuft (es läuft — siehe
 Stand oben); die Platine ersetzt das Breadboard danach 1:1.
@@ -337,39 +337,56 @@ aus einer langen Leiste abschneidbar) · Litze in den Netzfarben · optional ein
 Platine — als eigener Randpfad, weit weg von der 5-V-Logik — damit am Ende drei
 saubere Kabelbäume abgehen: Agon (J1), Modul (J2), Netzteil (J3).
 
+**Pad-Namen:** Die Platine ist am Rand beschriftet — Reihen **A** (oben) bis
+**X** (unten), Spalten **18** (links) bis **01** (rechts). Ein Pad heißt deshalb
+`J14` (Reihe J, Spalte 14) und ist damit eindeutig; das ist im Bild und in der
+Tabelle unten die einzige Ortsangabe. Die drei Stiftleisten sitzen an den
+Rändern: **J1** in Spalte 18 (links), **J2** in Spalte 01 (rechts), **J3** in
+Reihe X (unten rechts).
+
 ![Bauplan: Pegelwandler auf Lochraster 5×7 cm](bilder/lochraster-pegelwandler.svg)
 
 *Abb.: Draufsicht (Bauteilseite). Gelötet wird auf der Unterseite — die Litzen
-liegen dort isoliert und dürfen andere Löcher überkreuzen. Verbindung hat nur,
-was am Pad verlötet ist; dunkle Ringe markieren Pads mit mehreren Litzen. Die
-lila 12-V-Leitung verläuft ausschließlich am Platinenrand. Erzeugt mit
-`scripts/gen_perfboard_svg.py`.*
+liegen dort isoliert und dürfen fremde Löcher überqueren. Verbindung hat nur,
+was am Pad verlötet ist; dunkle Ringe markieren Pads mit mehreren Litzen, ein
+Halbbogen bedeutet: Die beiden Litzen kreuzen sich nur. Keine Litze läuft über
+ein Pad eines fremden Netzes — das prüft das Erzeugerskript und bricht sonst mit
+einer Meldung ab. Gestrichelt und bis zum Bildrand gezeichnet sind die Kabel,
+die die Platine verlassen. Die lila 12-V-Leitung bleibt in der rechten unteren
+Ecke. Erzeugt mit `scripts/gen_perfboard_svg.py` (dort steht auch die
+Netzliste; die Tabelle unten kommt aus derselben Quelle, `--md`).*
 
 **Verdrahtungstabelle** (in dieser Reihenfolge löten):
 
-| # | von | nach | Netz |
+| # | von → nach (Pads) | Netz | Zweck |
 |---|---|---|---|
-| 1 | J1 Pin 1 (+5 V) | IC Pin 14 | +5 V |
-| 2 | IC Pin 14 | C1 Bein 1 | +5 V |
-| 3 | IC Pin 13 | IC Pin 10 | +5 V (Brücke, OE̅ freigeben) |
-| 4 | IC Pin 10 | IC Pin 14 | +5 V (Brücke) |
-| 5 | IC Pin 4 | C1 Bein 1 | +5 V (OE̅2 freigeben) |
-| 6 | J1 Pin 2 (GND) | IC Pin 1 | GND (über das Pad von C1 Bein 2) |
-| 7 | IC Pin 12 | IC Pin 9 | GND (Brücke, Eingänge auf Masse) |
-| 8 | IC Pin 12 | C1 Bein 2 | GND |
-| 9 | IC Pin 5 | IC Pin 7 | GND (Brücke, Eingang auf Masse) |
-| 10 | IC Pin 2 | R2 Bein 1 | Pull-down |
-| 11 | R2 Bein 2 | IC Pin 5 | GND |
-| 12 | IC Pin 7 | J2 Pin 3 (GND) | GND |
-| 13 | IC Pin 7 | J3 Pin 2 (GND) | GND |
-| 14 | J1 Pin 3 (PC4) | IC Pin 2 | Daten 3,3 V |
-| 15 | IC Pin 3 | R1 Bein 1 | Daten 5 V |
-| 16 | R1 Bein 2 | J2 Pin 2 (Daten) | Daten zum Modul |
-| 17 | J3 Pin 1 (12 V) | J2 Pin 1 (12 V) | **12 V — nur der Randpfad!** |
+| 1 | `C18` → `C06` | +5 V | J1.1 +5 V → 5-V-Schiene |
+| 2 | `C06` → `P06` | +5 V | 5-V-Schiene (Spalte 06) |
+| 3 | `H14` → `H06` | +5 V | 5-V-Brücke über dem IC (Reihe H) |
+| 4 | `J14` → `H14` | +5 V | IC Pin 14 VCC |
+| 5 | `J13` → `H13` | +5 V | IC Pin 13 (OE4) → VCC |
+| 6 | `J10` → `H10` | +5 V | IC Pin 10 (OE3) → VCC |
+| 7 | `M11` → `P11` → `P06` | +5 V | IC Pin 4 (OE2) → VCC |
+| 8 | `E18` → `E16` → `N16` | GND | J1.3 GND → GND-Bus |
+| 9 | `N16` → `N03` → `P03` → `P01` | GND | GND-Bus (Reihe N) → J2.1 |
+| 10 | `M14` → `N14` | GND | IC Pin 1 (OE1) → GND |
+| 11 | `M10` → `N10` | GND | IC Pin 5 (2A) → GND |
+| 12 | `M08` → `N08` | GND | IC Pin 7 GND |
+| 13 | `J12` → `I12` → `I07` → `N07` | GND | IC Pin 12 (4A) → GND |
+| 14 | `J09` → `I09` | GND | IC Pin 9 (3A) → GND |
+| 15 | `Q15` → `N15` | GND | R2 (Pull-down) → GND |
+| 16 | `X03` → `X05` → `N05` | GND | J3.2 GND → GND-Bus |
+| 17 | `D18` → `D17` → `R17` → `R13` → `M13` | Daten 3,3 V | J1.2 PC4 → IC Pin 2 |
+| 18 | `M12` → `Q12` | Daten 5 V | IC Pin 3 → R1 |
+| 19 | `Q09` → `Q01` | Daten 5 V | R1 → J2.2 DIN |
+| 20 | `X02` → `X01` → `R01` | **12 V** | J3.1 → J2.3 (nur Randpfad!) |
 
-Wobei: R1 = 390 Ω (Datenleitung), R2 = 8,2 kΩ (Pull-down), C1 = 100 nF (direkt
-am IC zwischen Pin 14 und GND). J2 ist in JST-Reihenfolge belegt
-(12 V · Daten · GND), damit das Modulkabel 1:1 weiterreicht.
+Wobei: R1 = 390 Ω in der Datenleitung (`Q12`/`Q09`), R2 = 8,2 kΩ Pull-down
+(`Q15`/`Q13`), C1 = 100 nF Stützkondensator zwischen der 5-V-Litze `H08` und der
+GND-Litze `I08`, also direkt neben dem IC. Der IC liegt mit der Kerbe nach links,
+Pin 1 auf `M14` und Pin 14 auf `J14`. J2 ist von unten nach oben in
+JST-Reihenfolge belegt (`R01` = 12 V, `Q01` = Daten, `P01` = GND), damit das
+Modulkabel 1:1 weiterreicht.
 
 **Löt-Reihenfolge:** 1. Stiftleisten J1–J3 einlöten, Pins nach oben · 2. IC
 (Kerbe links, Pin 1 unten links — siehe Bild) oder Fassung · 3. C1, R1, R2 ·
@@ -379,11 +396,13 @@ der Weg auf dem Bild ist der minimale.
 
 **Prüfen vor dem ersten Strom** (Multimeter auf Durchgang):
 
-- J2 Pin 1 ↔ J3 Pin 1: **0 Ω** (12 V durchverbunden)
-- J3 Pin 1 ↔ J1 Pin 1, ↔ J2 Pin 3, ↔ J3 Pin 2: **unendlich** — 12 V muss von
-  5 V und GND getrennt sein, sonst stirbt die Platine beim Einschalten
-- J1 Pin 1 ↔ IC Pin 14: 0 Ω · J1 Pin 2 ↔ IC Pin 1: 0 Ω · J1 Pin 3 ↔ IC Pin 2: 0 Ω
-- IC Pin 14 ↔ IC Pin 1: **nicht 0 Ω** (typisch mehrere hundert Ω über R1/R2)
+- `X02` ↔ `R01` (J3.1 ↔ J2.3): **0 Ω** — die 12 V gehen durch
+- `X02` gegen `C18`, `P01`, `X03`: **unendlich** — 12 V muss von 5 V und GND
+  getrennt sein, sonst stirbt die Platine beim Einschalten
+- `C18` ↔ `J14` (J1.1 ↔ IC Pin 14): 0 Ω · `E18` ↔ `M14` (J1.3 ↔ IC Pin 1): 0 Ω ·
+  `D18` ↔ `M13` (J1.2 ↔ IC Pin 2): 0 Ω
+- `J14` ↔ `M14` (IC Pin 14 ↔ Pin 1): **nicht 0 Ω** (kein Kurzschluss)
+- `D18` ↔ `E18` (PC4 ↔ GND): rund **8,2 kΩ** über R2
 
 Danach gelten Abschnitt 8 (Checkliste, ohne die Breadboard-Punkte 2) und
 Abschnitt 9 unverändert — anschließen, `start.bas` laufen lassen, Schritt 6
